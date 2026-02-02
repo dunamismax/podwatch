@@ -4,7 +4,9 @@ Gatherer is a lightweight, privacy-first coordination app for small groups who g
 
 ## Project next step
 
-Auth UI, create pod/event flows, and RSVP/checklist mutations are now wired. Next: realtime updates and notification delivery for arrivals and schedule changes.
+- Run the latest `scripts/supabase-setup.sql` in the Supabase SQL editor (adds secure server defaults for invite tokens).
+- Convert multi-step writes (create pod + membership, accept invite + membership) into a single transactional RPC/Edge Function.
+- Add realtime updates and notification delivery for arrivals and schedule changes.
 
 ## What it is
 
@@ -27,7 +29,7 @@ This is not a social network. It is social infrastructure for recurring, real-li
 - Auth screens (magic link only) with callback handling
 - Create pod + create event flows (Supabase inserts)
 - RSVP + checklist updates (mutations + query invalidation)
-- Pod invites + pending invites flow
+- Pod invites + pending invites flow (invite tokens are generated server-side)
 - Profile creation on sign-in + profile editing
 - Pod + event detail screens with RSVP/arrival/checklist editing
 - Dark theme via React Native Paper
@@ -69,7 +71,7 @@ This is not a social network. It is social infrastructure for recurring, real-li
 
 ## Status
 
-UI scaffolding in place. Backend wiring is the current focus.
+UI scaffolding in place. Backend wiring and transactional safety are the current focus.
 
 ## Getting started
 
@@ -99,8 +101,8 @@ If you run `npm run android`, ensure the Android SDK is installed and `ANDROID_H
 
 ## Supabase setup
 
-Use `scripts/supabase-setup.sql` in the Supabase SQL editor to bootstrap or update the schema, RLS, and policies in one run (idempotent, non-destructive).
-`docs/supabase-setup.md` is the human-readable source; update it first, then regenerate `scripts/supabase-setup.sql` when schema or policy changes are made.
+Use `scripts/supabase-setup.sql` in the Supabase SQL editor to bootstrap or update the schema, RLS, and policies in one run (idempotent, non-destructive). This script also ensures `pod_invites.token` is server-generated and non-null.
+`scripts/supabase-setup.sql` is the source of truth for schema and policy changes.
 
 ## Contributing
 

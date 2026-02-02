@@ -53,6 +53,7 @@ It focuses on event-scoped planning, arrival, and real-time coordination.
 - Create flows: `app/create-pod.tsx`, `app/create-event.tsx`
 - Home and Pods tabs pull live data in `app/(tabs)/index.tsx` and `app/(tabs)/explore.tsx`.
 - Template components still exist in `src/components/` and can be pruned once replaced.
+  - Invite tokens are generated server-side (see `scripts/supabase-setup.sql`).
 
 ## Commands
 
@@ -68,7 +69,8 @@ It focuses on event-scoped planning, arrival, and real-time coordination.
 - Prefer feature modules under `src/features/` for domain logic.
 - Use Zod for input/env validation.
 - Use TanStack Query for data fetching and caching.
-- Update `docs/supabase-setup.md` first when schema/RLS changes, then keep `scripts/supabase-setup.sql` in sync.
+- `scripts/supabase-setup.sql` is the source of truth for schema/RLS changes.
+  - If you change invite or membership flows, consider adding/adjusting RPCs to keep multi-step writes transactional.
 
 ## License
 
