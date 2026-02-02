@@ -4,9 +4,10 @@ Gatherer is a lightweight, privacy-first coordination app for small groups who g
 
 ## Project next step
 
-- Run the latest `scripts/supabase-setup.sql` in the Supabase SQL editor (adds secure server defaults for invite tokens).
-- Convert multi-step writes (create pod + membership, accept invite + membership) into a single transactional RPC/Edge Function.
-- Add realtime updates and notification delivery for arrivals and schedule changes.
+- Run the latest `scripts/supabase-setup.sql` in the Supabase SQL editor (RPCs + tighter RLS).
+- Wire realtime updates for arrivals, RSVP changes, and checklist edits.
+- Add notification delivery for arrivals and schedule changes.
+- Add recurring pod schedules and role management UI.
 
 ## What it is
 
@@ -102,6 +103,7 @@ If you run `npm run android`, ensure the Android SDK is installed and `ANDROID_H
 ## Supabase setup
 
 Use `scripts/supabase-setup.sql` in the Supabase SQL editor to bootstrap or update the schema, RLS, and policies in one run (idempotent, non-destructive). This script also ensures `pod_invites.token` is server-generated and non-null.
+It also defines transactional RPCs for create pod + owner membership and accept invite + membership, and restricts invite acceptance to the RPC path.
 `scripts/supabase-setup.sql` is the source of truth for schema and policy changes.
 
 ## Contributing

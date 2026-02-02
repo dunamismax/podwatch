@@ -45,10 +45,13 @@ It focuses on event-scoped planning, arrival, and real-time coordination.
 - Env validation: `src/lib/env.ts`
 - Supabase session hook: `src/hooks/use-supabase-session.ts`
 - Supabase SQL bootstrap: `scripts/supabase-setup.sql` (run in Supabase SQL editor; idempotent)
+  - Includes transactional RPCs: `create_pod_with_owner` and `accept_pod_invite`
+  - Invite acceptance is restricted to the RPC path
 - Supabase query hooks:
   - Pods: `src/features/pods/pods-queries.ts`
   - Events/attendance/checklist: `src/features/events/events-queries.ts`
   - Profiles: `src/features/profiles/profiles-queries.ts`
+  - Invites (RPC accept): `src/features/invites/invites-queries.ts`
 - Auth screens: `app/auth.tsx`, `app/auth/callback.tsx`
 - Create flows: `app/create-pod.tsx`, `app/create-event.tsx`
 - Home and Pods tabs pull live data in `app/(tabs)/index.tsx` and `app/(tabs)/explore.tsx`.
