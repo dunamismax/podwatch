@@ -186,11 +186,11 @@ ALTER TABLE pod_invites ADD COLUMN IF NOT EXISTS created_at timestamptz not null
 
 -- Ensure invite tokens are server-generated and non-null
 UPDATE pod_invites
-SET token = encode(gen_random_uuid()::bytea, 'hex')
+SET token = encode(gen_random_bytes(16), 'hex')
 WHERE token IS NULL;
 
 ALTER TABLE pod_invites
-  ALTER COLUMN token SET DEFAULT encode(gen_random_uuid()::bytea, 'hex'),
+  ALTER COLUMN token SET DEFAULT encode(gen_random_bytes(16), 'hex'),
   ALTER COLUMN token SET NOT NULL;
 
 -- 4) Indexes
@@ -212,6 +212,53 @@ begin
   return new;
 end;
 $$ language plpgsql;
+
+-- 5b) Helper functions (avoid RLS recursion in policies)
+create or replace function can_access_pod(pod_id uuid, user_id uuid)
+returns boolean
+language sql
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1 from pod_memberships
+    where pod_memberships.pod_id = can_access_pod.pod_id
+      and pod_memberships.user_id = can_access_pod.user_id
+      and pod_memberships.is_active = true
+  );
+$$;
+
+create or replace function is_pod_admin(pod_id uuid, user_id uuid)
+returns boolean
+language sql
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1 from pod_memberships
+    where pod_memberships.pod_id = is_pod_admin.pod_id
+      and pod_memberships.user_id = is_pod_admin.user_id
+      and pod_memberships.is_active = true
+      and pod_memberships.role in ('owner','admin')
+  );
+$$;
+
+create or replace function shares_pod_with(profile_id uuid, user_id uuid)
+returns boolean
+language sql
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from pod_memberships self
+    join pod_memberships other on other.pod_id = self.pod_id
+    where self.user_id = shares_pod_with.user_id
+      and self.is_active = true
+      and other.user_id = shares_pod_with.profile_id
+      and other.is_active = true
+  );
+$$;
 
 DO $$ BEGIN
   create trigger pods_set_updated_at before update on pods
@@ -247,12 +294,7 @@ DROP POLICY IF EXISTS pods_read ON pods;
 CREATE POLICY pods_read ON pods
 FOR SELECT USING (
   created_by = auth.uid()
-  OR EXISTS (
-    SELECT 1 FROM pod_memberships
-    WHERE pod_memberships.pod_id = pods.id
-      AND pod_memberships.user_id = auth.uid()
-      AND pod_memberships.is_active = true
-  )
+  OR can_access_pod(pods.id, auth.uid())
 );
 
 DROP POLICY IF EXISTS pods_insert ON pods;
@@ -264,15 +306,7 @@ DROP POLICY IF EXISTS profiles_read ON profiles;
 CREATE POLICY profiles_read ON profiles
 FOR SELECT USING (
   id = auth.uid()
-  OR EXISTS (
-    SELECT 1
-    FROM pod_memberships self
-    JOIN pod_memberships other ON other.pod_id = self.pod_id
-    WHERE self.user_id = auth.uid()
-      AND self.is_active = true
-      AND other.user_id = profiles.id
-      AND other.is_active = true
-  )
+  OR shares_pod_with(profiles.id, auth.uid())
 );
 
 DROP POLICY IF EXISTS profiles_insert ON profiles;
@@ -286,34 +320,19 @@ FOR UPDATE USING (auth.uid() = id);
 DROP POLICY IF EXISTS pods_update ON pods;
 CREATE POLICY pods_update ON pods
 FOR UPDATE USING (
-  EXISTS (
-    SELECT 1 FROM pod_memberships
-    WHERE pod_memberships.pod_id = pods.id
-      AND pod_memberships.user_id = auth.uid()
-      AND pod_memberships.role in ('owner','admin')
-  )
+  is_pod_admin(pods.id, auth.uid())
 );
 
 DROP POLICY IF EXISTS memberships_read ON pod_memberships;
 CREATE POLICY memberships_read ON pod_memberships
 FOR SELECT USING (
-  EXISTS (
-    SELECT 1 FROM pod_memberships m
-    WHERE m.pod_id = pod_memberships.pod_id
-      AND m.user_id = auth.uid()
-      AND m.is_active = true
-  )
+  can_access_pod(pod_memberships.pod_id, auth.uid())
 );
 
 DROP POLICY IF EXISTS memberships_insert ON pod_memberships;
 CREATE POLICY memberships_insert ON pod_memberships
 FOR INSERT WITH CHECK (
-  EXISTS (
-    SELECT 1 FROM pod_memberships m
-    WHERE m.pod_id = pod_memberships.pod_id
-      AND m.user_id = auth.uid()
-      AND m.role in ('owner','admin')
-  )
+  is_pod_admin(pod_memberships.pod_id, auth.uid())
 );
 
 -- Memberships: invited users can accept into a pod
@@ -335,35 +354,20 @@ FOR INSERT WITH CHECK (
 DROP POLICY IF EXISTS events_read ON events;
 CREATE POLICY events_read ON events
 FOR SELECT USING (
-  EXISTS (
-    SELECT 1 FROM pod_memberships
-    WHERE pod_memberships.pod_id = events.pod_id
-      AND pod_memberships.user_id = auth.uid()
-      AND pod_memberships.is_active = true
-  )
+  can_access_pod(events.pod_id, auth.uid())
 );
 
 DROP POLICY IF EXISTS events_insert ON events;
 CREATE POLICY events_insert ON events
 FOR INSERT WITH CHECK (
-  EXISTS (
-    SELECT 1 FROM pod_memberships
-    WHERE pod_memberships.pod_id = events.pod_id
-      AND pod_memberships.user_id = auth.uid()
-      AND pod_memberships.is_active = true
-  )
+  can_access_pod(events.pod_id, auth.uid())
 );
 
 DROP POLICY IF EXISTS events_update ON events;
 CREATE POLICY events_update ON events
 FOR UPDATE USING (
   events.created_by = auth.uid()
-  OR EXISTS (
-    SELECT 1 FROM pod_memberships
-    WHERE pod_memberships.pod_id = events.pod_id
-      AND pod_memberships.user_id = auth.uid()
-      AND pod_memberships.role in ('owner','admin')
-  )
+  OR is_pod_admin(events.pod_id, auth.uid())
 );
 
 DROP POLICY IF EXISTS attendance_read ON event_attendance;
@@ -371,10 +375,8 @@ CREATE POLICY attendance_read ON event_attendance
 FOR SELECT USING (
   EXISTS (
     SELECT 1 FROM events
-    JOIN pod_memberships ON pod_memberships.pod_id = events.pod_id
     WHERE events.id = event_attendance.event_id
-      AND pod_memberships.user_id = auth.uid()
-      AND pod_memberships.is_active = true
+      AND can_access_pod(events.pod_id, auth.uid())
   )
 );
 
@@ -391,10 +393,8 @@ CREATE POLICY checklist_read ON event_checklist_items
 FOR SELECT USING (
   EXISTS (
     SELECT 1 FROM events
-    JOIN pod_memberships ON pod_memberships.pod_id = events.pod_id
     WHERE events.id = event_checklist_items.event_id
-      AND pod_memberships.user_id = auth.uid()
-      AND pod_memberships.is_active = true
+      AND can_access_pod(events.pod_id, auth.uid())
   )
 );
 
@@ -403,10 +403,8 @@ CREATE POLICY checklist_insert ON event_checklist_items
 FOR INSERT WITH CHECK (
   EXISTS (
     SELECT 1 FROM events
-    JOIN pod_memberships ON pod_memberships.pod_id = events.pod_id
     WHERE events.id = event_checklist_items.event_id
-      AND pod_memberships.user_id = auth.uid()
-      AND pod_memberships.is_active = true
+      AND can_access_pod(events.pod_id, auth.uid())
   )
 );
 
@@ -416,10 +414,8 @@ FOR UPDATE USING (
   event_checklist_items.created_by = auth.uid()
   OR EXISTS (
     SELECT 1 FROM events
-    JOIN pod_memberships ON pod_memberships.pod_id = events.pod_id
     WHERE events.id = event_checklist_items.event_id
-      AND pod_memberships.user_id = auth.uid()
-      AND pod_memberships.role in ('owner','admin')
+      AND is_pod_admin(events.pod_id, auth.uid())
   )
 );
 
@@ -427,12 +423,7 @@ FOR UPDATE USING (
 DROP POLICY IF EXISTS invites_read ON pod_invites;
 CREATE POLICY invites_read ON pod_invites
 FOR SELECT USING (
-  EXISTS (
-    SELECT 1 FROM pod_memberships
-    WHERE pod_memberships.pod_id = pod_invites.pod_id
-      AND pod_memberships.user_id = auth.uid()
-      AND pod_memberships.role in ('owner','admin')
-  )
+  is_pod_admin(pod_invites.pod_id, auth.uid())
   OR pod_invites.invited_user_id = auth.uid()
   OR pod_invites.invited_email = (auth.jwt() ->> 'email')
 );
@@ -440,12 +431,7 @@ FOR SELECT USING (
 DROP POLICY IF EXISTS invites_insert ON pod_invites;
 CREATE POLICY invites_insert ON pod_invites
 FOR INSERT WITH CHECK (
-  EXISTS (
-    SELECT 1 FROM pod_memberships
-    WHERE pod_memberships.pod_id = pod_invites.pod_id
-      AND pod_memberships.user_id = auth.uid()
-      AND pod_memberships.role in ('owner','admin')
-  )
+  is_pod_admin(pod_invites.pod_id, auth.uid())
 );
 
 -- Invites: invitees can mark their invite accepted

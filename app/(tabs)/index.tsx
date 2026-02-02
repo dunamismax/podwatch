@@ -169,10 +169,7 @@ export default function HomeScreen() {
       <Appbar.Header elevated>
         <Appbar.Content title="Gatherer" subtitle="Your next meet-up" />
         <Appbar.Action icon="bell-outline" onPress={() => undefined} />
-        <Appbar.Action
-          icon="account-circle"
-          onPress={() => router.push(user ? '/profile' : '/auth')}
-        />
+        <Appbar.Action icon="account-circle" onPress={() => router.push('/auth')} />
       </Appbar.Header>
       <ScrollView contentContainerStyle={styles.content}>
         <Text variant="titleLarge">Next gather</Text>

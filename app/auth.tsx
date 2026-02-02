@@ -1,9 +1,10 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as Linking from 'expo-linking';
 import { Appbar, Button, HelperText, Surface, Text, TextInput, useTheme } from 'react-native-paper';
 
+import { useProfile, useUpsertProfile } from '@/features/profiles/profiles-queries';
 import { useSupabaseSession } from '@/hooks/use-supabase-session';
 import { supabase } from '@/lib/supabase';
 
@@ -11,12 +12,34 @@ export default function AuthScreen() {
   const router = useRouter();
   const theme = useTheme();
   const { user, isLoading } = useSupabaseSession();
+  const profileQuery = useProfile(user?.id);
+  const upsertProfile = useUpsertProfile();
   const [email, setEmail] = useState('');
   const [status, setStatus] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [profileStatus, setProfileStatus] = useState<string | null>(null);
+
+  const [displayName, setDisplayName] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [contactEmail, setContactEmail] = useState('');
+  const [contactHandle, setContactHandle] = useState('');
+  const [contactNotes, setContactNotes] = useState('');
 
   const redirectTo = useMemo(() => Linking.createURL('auth/callback'), []);
   const emailError = email.length > 0 && !email.includes('@');
+
+  useEffect(() => {
+    if (!profileQuery.data) return;
+    setDisplayName(profileQuery.data.display_name ?? '');
+    setFirstName(profileQuery.data.first_name ?? '');
+    setLastName(profileQuery.data.last_name ?? '');
+    setPhone(profileQuery.data.phone ?? '');
+    setContactEmail(profileQuery.data.contact_email ?? '');
+    setContactHandle(profileQuery.data.contact_handle ?? '');
+    setContactNotes(profileQuery.data.contact_notes ?? '');
+  }, [profileQuery.data]);
 
   const handleMagicLink = async () => {
     if (!email || emailError) return;
@@ -45,6 +68,31 @@ export default function AuthScreen() {
       setStatus(error.message);
     }
     setIsSubmitting(false);
+  };
+
+  const firstNameError = firstName.trim().length === 0;
+  const lastNameError = lastName.trim().length === 0;
+  const contactEmailError = contactEmail.length > 0 && !contactEmail.includes('@');
+
+  const handleSaveProfile = async () => {
+    if (!user || firstNameError || lastNameError || contactEmailError) return;
+    setProfileStatus(null);
+    try {
+      await upsertProfile.mutateAsync({
+        id: user.id,
+        email: user.email ?? null,
+        display_name: displayName.trim() ? displayName.trim() : null,
+        first_name: firstName.trim(),
+        last_name: lastName.trim(),
+        phone: phone.trim() ? phone.trim() : null,
+        contact_email: contactEmail.trim() ? contactEmail.trim() : null,
+        contact_handle: contactHandle.trim() ? contactHandle.trim() : null,
+        contact_notes: contactNotes.trim() ? contactNotes.trim() : null,
+      });
+      setProfileStatus('Profile saved.');
+    } catch (error) {
+      setProfileStatus(error instanceof Error ? error.message : 'Unable to save profile.');
+    }
   };
 
   return (
@@ -90,9 +138,6 @@ export default function AuthScreen() {
             ) : user ? (
               <>
                 <Text variant="bodyMedium">Signed in as {user.email ?? 'Unknown email'}.</Text>
-                <Button mode="outlined" onPress={() => router.push('/profile')}>
-                  Edit profile
-                </Button>
                 <Button mode="contained" onPress={handleSignOut} disabled={isSubmitting}>
                   Sign out
                 </Button>
@@ -106,6 +151,100 @@ export default function AuthScreen() {
               </Text>
             ) : null}
           </Surface>
+
+          {user ? (
+            <Surface elevation={1} style={styles.surface}>
+              <Text variant="titleMedium">Your profile</Text>
+              {profileQuery.isLoading ? (
+                <Text variant="bodyMedium">Loading profile...</Text>
+              ) : (
+                <>
+                  <TextInput
+                    mode="outlined"
+                    label="Display name (optional)"
+                    value={displayName}
+                    onChangeText={setDisplayName}
+                    style={styles.input}
+                  />
+                  <TextInput
+                    mode="outlined"
+                    label="First name"
+                    value={firstName}
+                    onChangeText={setFirstName}
+                    autoCapitalize="words"
+                    style={styles.input}
+                  />
+                  <HelperText type="error" visible={firstNameError}>
+                    First name is required.
+                  </HelperText>
+                  <TextInput
+                    mode="outlined"
+                    label="Last name"
+                    value={lastName}
+                    onChangeText={setLastName}
+                    autoCapitalize="words"
+                    style={styles.input}
+                  />
+                  <HelperText type="error" visible={lastNameError}>
+                    Last name is required.
+                  </HelperText>
+                  <TextInput
+                    mode="outlined"
+                    label="Phone (optional)"
+                    value={phone}
+                    onChangeText={setPhone}
+                    keyboardType="phone-pad"
+                    style={styles.input}
+                  />
+                  <TextInput
+                    mode="outlined"
+                    label="Contact email (optional)"
+                    value={contactEmail}
+                    onChangeText={setContactEmail}
+                    autoCapitalize="none"
+                    keyboardType="email-address"
+                    style={styles.input}
+                  />
+                  <HelperText type="error" visible={contactEmailError}>
+                    Enter a valid contact email address.
+                  </HelperText>
+                  <TextInput
+                    mode="outlined"
+                    label="Contact handle (optional)"
+                    value={contactHandle}
+                    onChangeText={setContactHandle}
+                    style={styles.input}
+                  />
+                  <TextInput
+                    mode="outlined"
+                    label="Notes (optional)"
+                    value={contactNotes}
+                    onChangeText={setContactNotes}
+                    multiline
+                    style={styles.input}
+                  />
+                  <Button
+                    mode="contained"
+                    onPress={handleSaveProfile}
+                    disabled={
+                      isLoading ||
+                      profileQuery.isLoading ||
+                      upsertProfile.isPending ||
+                      firstNameError ||
+                      lastNameError ||
+                      contactEmailError
+                    }>
+                    Save profile
+                  </Button>
+                  {profileStatus ? (
+                    <Text variant="bodySmall" style={{ color: theme.colors.primary }}>
+                      {profileStatus}
+                    </Text>
+                  ) : null}
+                </>
+              )}
+            </Surface>
+          ) : null}
         </ScrollView>
       </KeyboardAvoidingView>
     </View>
