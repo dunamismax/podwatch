@@ -20,6 +20,7 @@ import {
   useEventAttendance,
   useEventById,
   useEventChecklist,
+  useEventRealtime,
   useUpdateArrival,
   useUpdateChecklistItem,
   useUpdateRsvp,
@@ -79,6 +80,7 @@ export default function EventDetailScreen() {
   const eventQuery = useEventById(eventId);
   const attendanceQuery = useEventAttendance(eventId);
   const checklistQuery = useEventChecklist(eventId);
+  useEventRealtime(eventId);
   const updateRsvp = useUpdateRsvp();
   const updateArrival = useUpdateArrival();
   const updateChecklistItem = useUpdateChecklistItem();
@@ -202,6 +204,12 @@ export default function EventDetailScreen() {
       <Appbar.Header elevated>
         <Appbar.BackAction onPress={() => router.back()} />
         <Appbar.Content title={eventQuery.data?.title ?? 'Event'} subtitle="Details & RSVP" />
+        {eventQuery.data ? (
+          <Appbar.Action
+            icon="pencil"
+            onPress={() => router.push(`/event/edit/${eventQuery.data?.id}`)}
+          />
+        ) : null}
       </Appbar.Header>
       <ScrollView contentContainerStyle={styles.content}>
         <Surface elevation={1} style={styles.surface}>

@@ -4,6 +4,7 @@ import {
   ActivityIndicator,
   Appbar,
   Avatar,
+  Badge,
   Button,
   Card,
   Chip,
@@ -18,10 +19,15 @@ import { useRouter } from 'expo-router';
 import {
   useEventAttendance,
   useEventChecklist,
+  useEventRealtime,
   useUpcomingEvents,
   useUpdateChecklistItem,
   useUpdateRsvp,
 } from '@/features/events/events-queries';
+import {
+  useNotifications,
+  useNotificationsRealtime,
+} from '@/features/notifications/notifications-queries';
 import { usePodsByUser } from '@/features/pods/pods-queries';
 import { useProfilesByIds } from '@/features/profiles/profiles-queries';
 import { useSupabaseSession } from '@/hooks/use-supabase-session';
@@ -84,6 +90,9 @@ export default function HomeScreen() {
   const nextEvent = eventsQuery.data?.[0];
   const attendanceQuery = useEventAttendance(nextEvent?.id);
   const checklistQuery = useEventChecklist(nextEvent?.id);
+  useEventRealtime(nextEvent?.id);
+  const notificationsQuery = useNotifications(user?.id);
+  useNotificationsRealtime(user?.id);
   const updateRsvp = useUpdateRsvp();
   const updateChecklistItem = useUpdateChecklistItem();
   const attendanceUserIds = useMemo(
@@ -96,6 +105,8 @@ export default function HomeScreen() {
     [profilesQuery.data]
   );
   const [actionMessage, setActionMessage] = useState<string | null>(null);
+  const unreadCount =
+    notificationsQuery.data?.filter((notification) => !notification.read_at).length ?? 0;
 
   const nextEventDisplay = nextEvent
     ? {
@@ -168,7 +179,14 @@ export default function HomeScreen() {
     <View style={styles.screen}>
       <Appbar.Header elevated>
         <Appbar.Content title="Gatherer" subtitle="Your next meet-up" />
-        <Appbar.Action icon="bell-outline" onPress={() => undefined} />
+        <View style={styles.notificationBell}>
+          <Appbar.Action icon="bell-outline" onPress={() => router.push('/notifications')} />
+          {unreadCount > 0 ? (
+            <Badge style={styles.notificationBadge} size={18}>
+              {unreadCount > 9 ? '9+' : unreadCount}
+            </Badge>
+          ) : null}
+        </View>
         <Appbar.Action icon="account-circle" onPress={() => router.push('/auth')} />
       </Appbar.Header>
       <ScrollView contentContainerStyle={styles.content}>
@@ -360,5 +378,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 12,
+  },
+  notificationBell: {
+    position: 'relative',
+  },
+  notificationBadge: {
+    position: 'absolute',
+    top: 2,
+    right: 6,
   },
 });

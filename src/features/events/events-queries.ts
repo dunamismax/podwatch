@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { supabase } from '@/lib/supabase';
@@ -121,6 +122,16 @@ type CreateEventInput = {
   locationText?: string | null;
 };
 
+type UpdateEventInput = {
+  eventId: string;
+  userId: string;
+  title?: string;
+  description?: string | null;
+  startsAt?: string;
+  endsAt?: string | null;
+  locationText?: string | null;
+};
+
 type UpdateRsvpInput = {
   eventId: string;
   userId: string;
@@ -147,6 +158,29 @@ type CreateChecklistItemInput = {
   label: string;
   note?: string | null;
 };
+
+type NotifyEventInput = {
+  eventId: string;
+  actorId: string;
+  type: 'event_created' | 'schedule_changed' | 'arrival_update' | 'eta_update';
+  arrival?: EventAttendanceRow['arrival'];
+  etaMinutes?: number | null;
+  changedFields?: string[];
+};
+
+async function notifyEvent(payload: NotifyEventInput) {
+  try {
+    const { error } = await supabase.functions.invoke('notify-event', {
+      body: payload,
+    });
+
+    if (error) {
+      throw error;
+    }
+  } catch (error) {
+    console.warn('Failed to notify event:', error);
+  }
+}
 
 async function updateRsvp({ eventId, userId, rsvp }: UpdateRsvpInput) {
   const { error } = await supabase
@@ -208,6 +242,33 @@ async function createChecklistItem({ eventId, userId, label, note }: CreateCheck
     state: 'open',
     created_by: userId,
   });
+
+  if (error) {
+    throw error;
+  }
+}
+
+async function updateEvent({
+  eventId,
+  title,
+  description,
+  startsAt,
+  endsAt,
+  locationText,
+}: UpdateEventInput) {
+  const updates: Record<string, string | null> = {};
+
+  if (typeof title !== 'undefined') updates.title = title;
+  if (typeof description !== 'undefined') updates.description = description ?? null;
+  if (typeof startsAt !== 'undefined') updates.starts_at = startsAt;
+  if (typeof endsAt !== 'undefined') updates.ends_at = endsAt ?? null;
+  if (typeof locationText !== 'undefined') updates.location_text = locationText ?? null;
+
+  if (Object.keys(updates).length === 0) {
+    return;
+  }
+
+  const { error } = await supabase.from('events').update(updates).eq('id', eventId);
 
   if (error) {
     throw error;
@@ -282,6 +343,51 @@ export function useEventChecklist(eventId?: string) {
   });
 }
 
+export function useEventRealtime(eventId?: string) {
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (!eventId) return;
+
+    const attendanceChannel = supabase
+      .channel(`event-${eventId}-attendance`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'event_attendance',
+          filter: `event_id=eq.${eventId}`,
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: eventKeys.attendance(eventId) });
+        }
+      )
+      .subscribe();
+
+    const checklistChannel = supabase
+      .channel(`event-${eventId}-checklist`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'event_checklist_items',
+          filter: `event_id=eq.${eventId}`,
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: eventKeys.checklist(eventId) });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(attendanceChannel);
+      supabase.removeChannel(checklistChannel);
+    };
+  }, [eventId, queryClient]);
+}
+
 export function useUpdateRsvp() {
   const queryClient = useQueryClient();
 
@@ -300,6 +406,13 @@ export function useUpdateArrival() {
     mutationFn: updateArrival,
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: eventKeys.attendance(variables.eventId) });
+      void notifyEvent({
+        eventId: variables.eventId,
+        actorId: variables.userId,
+        type: variables.etaMinutes ? 'eta_update' : 'arrival_update',
+        arrival: variables.arrival,
+        etaMinutes: variables.etaMinutes ?? null,
+      });
     },
   });
 }
@@ -331,8 +444,39 @@ export function useCreateEvent() {
 
   return useMutation({
     mutationFn: createEvent,
-    onSuccess: () => {
+    onSuccess: (eventId, variables) => {
       queryClient.invalidateQueries({ queryKey: eventKeys.all });
+      void notifyEvent({
+        eventId,
+        actorId: variables.userId,
+        type: 'event_created',
+      });
+    },
+  });
+}
+
+export function useUpdateEvent() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: updateEvent,
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: eventKeys.byId(variables.eventId) });
+      const changedFields = [
+        typeof variables.startsAt !== 'undefined' ? 'starts_at' : null,
+        typeof variables.endsAt !== 'undefined' ? 'ends_at' : null,
+        typeof variables.locationText !== 'undefined' ? 'location_text' : null,
+        typeof variables.title !== 'undefined' ? 'title' : null,
+      ].filter(Boolean) as string[];
+
+      if (changedFields.length > 0) {
+        void notifyEvent({
+          eventId: variables.eventId,
+          actorId: variables.userId,
+          type: 'schedule_changed',
+          changedFields,
+        });
+      }
     },
   });
 }

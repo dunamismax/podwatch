@@ -138,6 +138,31 @@ create table if not exists event_checklist_items (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists notifications (
+  id uuid primary key default gen_random_uuid(),
+  recipient_id uuid not null references auth.users(id) on delete cascade,
+  actor_id uuid references auth.users(id) on delete set null,
+  pod_id uuid references pods(id) on delete cascade,
+  event_id uuid references events(id) on delete cascade,
+  type text not null,
+  title text not null,
+  body text,
+  data jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  read_at timestamptz
+);
+
+create table if not exists user_push_tokens (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  token text not null,
+  platform text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  last_seen_at timestamptz not null default now(),
+  unique (user_id, token)
+);
+
 create table if not exists pod_invites (
   id uuid primary key default gen_random_uuid(),
   pod_id uuid not null references pods(id) on delete cascade,
@@ -177,6 +202,24 @@ ALTER TABLE event_attendance ADD COLUMN IF NOT EXISTS updated_at timestamptz not
 ALTER TABLE event_checklist_items ADD COLUMN IF NOT EXISTS note text;
 ALTER TABLE event_checklist_items ADD COLUMN IF NOT EXISTS updated_at timestamptz not null default now();
 
+ALTER TABLE notifications ADD COLUMN IF NOT EXISTS recipient_id uuid;
+ALTER TABLE notifications ADD COLUMN IF NOT EXISTS actor_id uuid;
+ALTER TABLE notifications ADD COLUMN IF NOT EXISTS pod_id uuid;
+ALTER TABLE notifications ADD COLUMN IF NOT EXISTS event_id uuid;
+ALTER TABLE notifications ADD COLUMN IF NOT EXISTS type text;
+ALTER TABLE notifications ADD COLUMN IF NOT EXISTS title text;
+ALTER TABLE notifications ADD COLUMN IF NOT EXISTS body text;
+ALTER TABLE notifications ADD COLUMN IF NOT EXISTS data jsonb not null default '{}'::jsonb;
+ALTER TABLE notifications ADD COLUMN IF NOT EXISTS created_at timestamptz not null default now();
+ALTER TABLE notifications ADD COLUMN IF NOT EXISTS read_at timestamptz;
+
+ALTER TABLE user_push_tokens ADD COLUMN IF NOT EXISTS user_id uuid;
+ALTER TABLE user_push_tokens ADD COLUMN IF NOT EXISTS token text;
+ALTER TABLE user_push_tokens ADD COLUMN IF NOT EXISTS platform text;
+ALTER TABLE user_push_tokens ADD COLUMN IF NOT EXISTS created_at timestamptz not null default now();
+ALTER TABLE user_push_tokens ADD COLUMN IF NOT EXISTS updated_at timestamptz not null default now();
+ALTER TABLE user_push_tokens ADD COLUMN IF NOT EXISTS last_seen_at timestamptz not null default now();
+
 ALTER TABLE pod_invites ADD COLUMN IF NOT EXISTS invited_email text;
 ALTER TABLE pod_invites ADD COLUMN IF NOT EXISTS invited_user_id uuid;
 ALTER TABLE pod_invites ADD COLUMN IF NOT EXISTS status invite_status not null default 'pending';
@@ -202,6 +245,8 @@ create index if not exists idx_events_starts_at on events(starts_at);
 create index if not exists idx_event_attendance_event on event_attendance(event_id);
 create index if not exists idx_event_attendance_user on event_attendance(user_id);
 create index if not exists idx_checklist_event on event_checklist_items(event_id);
+create index if not exists idx_notifications_recipient_created on notifications(recipient_id, created_at desc);
+create index if not exists idx_push_tokens_user on user_push_tokens(user_id);
 create index if not exists idx_invites_pod on pod_invites(pod_id);
 
 -- 5) Updated-at trigger
@@ -284,6 +329,11 @@ DO $$ BEGIN
   for each row execute procedure set_updated_at();
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
+DO $$ BEGIN
+  create trigger push_tokens_set_updated_at before update on user_push_tokens
+  for each row execute procedure set_updated_at();
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
 -- 6) Row Level Security (RLS)
 ALTER TABLE pods ENABLE ROW LEVEL SECURITY;
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
@@ -291,6 +341,8 @@ ALTER TABLE pod_memberships ENABLE ROW LEVEL SECURITY;
 ALTER TABLE events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE event_attendance ENABLE ROW LEVEL SECURITY;
 ALTER TABLE event_checklist_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_push_tokens ENABLE ROW LEVEL SECURITY;
 ALTER TABLE pod_invites ENABLE ROW LEVEL SECURITY;
 
 -- 7) Policies (drop and recreate to keep updated)
@@ -425,6 +477,39 @@ WITH CHECK (
   )
 );
 
+DROP POLICY IF EXISTS notifications_read ON notifications;
+CREATE POLICY notifications_read ON notifications
+FOR SELECT USING (
+  recipient_id = auth.uid()
+);
+
+DROP POLICY IF EXISTS notifications_update ON notifications;
+CREATE POLICY notifications_update ON notifications
+FOR UPDATE USING (
+  recipient_id = auth.uid()
+);
+
+DROP POLICY IF EXISTS push_tokens_read ON user_push_tokens;
+CREATE POLICY push_tokens_read ON user_push_tokens
+FOR SELECT USING (
+  user_id = auth.uid()
+);
+
+DROP POLICY IF EXISTS push_tokens_insert ON user_push_tokens;
+CREATE POLICY push_tokens_insert ON user_push_tokens
+FOR INSERT WITH CHECK (
+  user_id = auth.uid()
+);
+
+DROP POLICY IF EXISTS push_tokens_update ON user_push_tokens;
+CREATE POLICY push_tokens_update ON user_push_tokens
+FOR UPDATE USING (
+  user_id = auth.uid()
+)
+WITH CHECK (
+  user_id = auth.uid()
+);
+
 -- Invites: admins/owners can read all; invitees can read their own
 DROP POLICY IF EXISTS invites_read ON pod_invites;
 CREATE POLICY invites_read ON pod_invites
@@ -446,6 +531,11 @@ CREATE POLICY invites_update ON pod_invites
 FOR UPDATE USING (
   is_pod_admin(pod_invites.pod_id, auth.uid())
 );
+
+-- 9) Realtime (optional)
+DO $$ BEGIN
+  ALTER PUBLICATION supabase_realtime ADD TABLE notifications;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 -- 8) RPCs for transactional writes
 create or replace function create_pod_with_owner(
