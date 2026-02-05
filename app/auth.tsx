@@ -6,6 +6,7 @@ import { Appbar, Button, HelperText, Surface, Text, TextInput, useTheme } from '
 
 import { useProfile, useUpsertProfile } from '@/features/profiles/profiles-queries';
 import { useSupabaseSession } from '@/hooks/use-supabase-session';
+import { clearPendingMagicLinkEmail, setPendingMagicLinkEmail } from '@/lib/magic-link-state';
 import { supabase } from '@/lib/supabase';
 
 export default function AuthScreen() {
@@ -60,15 +61,20 @@ export default function AuthScreen() {
 
   const handleMagicLink = async () => {
     if (!email || emailError || lastMagicLinkSentAt) return;
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!normalizedEmail) return;
+
     setIsSubmitting(true);
     setStatus(null);
+    setPendingMagicLinkEmail(normalizedEmail);
 
     const { error } = await supabase.auth.signInWithOtp({
-      email,
+      email: normalizedEmail,
       options: { emailRedirectTo: redirectTo },
     });
 
     if (error) {
+      clearPendingMagicLinkEmail();
       if (error.status === 429) {
         setStatus('Too many requests. Please wait a minute and try again.');
       } else {
@@ -88,6 +94,8 @@ export default function AuthScreen() {
     const { error } = await supabase.auth.signOut();
     if (error) {
       setStatus(error.message);
+    } else {
+      clearPendingMagicLinkEmail();
     }
     setIsSubmitting(false);
   };
