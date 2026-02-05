@@ -57,6 +57,7 @@ export default function RootLayout() {
           <Stack>
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
             <Stack.Screen name="auth" options={{ headerShown: false }} />
+            <Stack.Screen name="auth/callback" options={{ headerShown: false }} />
             <Stack.Screen name="create-pod" options={{ headerShown: false }} />
             <Stack.Screen name="create-event" options={{ headerShown: false }} />
             <Stack.Screen name="pod/[id]" options={{ headerShown: false }} />
