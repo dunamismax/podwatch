@@ -4,8 +4,8 @@ This file gives fast context for AI agents working in this repo.
 
 ## Project summary
 
-Magic Pod Dashboard is a privacy-first web app for Magic: The Gathering pods and other tabletop groups.
-It focuses on event planning, attendance, and real-time session updates.
+Magic Pod Dashboard is a web app for Magic: The Gathering pods and other tabletop groups.
+It focuses on pod management, event planning, attendance and arrival tracking, invites, and real-time notifications.
 
 ## Tech stack
 
