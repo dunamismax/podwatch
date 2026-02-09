@@ -680,4 +680,6 @@ grant execute on function create_pod_with_owner(text, text, text) to authenticat
 grant execute on function accept_pod_invite(uuid) to authenticated;
 
 -- Notes:
+-- Email OTP vs magic-link delivery is configured in Supabase Auth Email Templates
+-- (use {{ .Token }} for code flow, not {{ .ConfirmationURL }}).
 -- If your JWT claims do not include email, update invite policies to match your auth configuration.

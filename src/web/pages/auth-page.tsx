@@ -29,8 +29,10 @@ export function AuthPage() {
   const [contactHandle, setContactHandle] = useState('');
   const [contactNotes, setContactNotes] = useState('');
 
-  const emailError = email.length > 0 && !email.includes('@');
-  const codeError = code.length > 0 && code.trim().length < 6;
+  const normalizedEmail = email.trim().toLowerCase();
+  const signInEmail = codeSentToEmail ?? normalizedEmail;
+  const emailError = email.length > 0 && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail);
+  const codeError = code.length > 0 && !/^\d{6}$/.test(code.trim());
   const firstNameError = firstName.trim().length === 0;
   const lastNameError = lastName.trim().length === 0;
   const contactEmailError = contactEmail.length > 0 && !contactEmail.includes('@');
@@ -47,6 +49,24 @@ export function AuthPage() {
   }, [profileQuery.data]);
 
   useEffect(() => {
+    const hash = window.location.hash.startsWith('#')
+      ? window.location.hash.slice(1)
+      : window.location.hash;
+    if (!hash) return;
+
+    const hashParams = new URLSearchParams(hash);
+    const hashType = hashParams.get('type');
+    const hasLegacyMagicLinkToken = Boolean(hashParams.get('access_token'));
+
+    if (hashType === 'magiclink' || hasLegacyMagicLinkToken) {
+      setStatus(
+        'This app uses one-time codes only. Request a new code. If Supabase emails a link instead of a 6-digit code, update Auth > Email Templates to use {{ .Token }} and remove {{ .ConfirmationURL }}.'
+      );
+      window.history.replaceState(null, document.title, window.location.pathname + window.location.search);
+    }
+  }, []);
+
+  useEffect(() => {
     if (!lastCodeSentAt) return;
     const tick = () => {
       const remainingMs = 60_000 - (Date.now() - lastCodeSentAt);
@@ -61,7 +81,6 @@ export function AuthPage() {
 
   const handleSendCode = async () => {
     if (!email || emailError || lastCodeSentAt) return;
-    const normalizedEmail = email.trim().toLowerCase();
     if (!normalizedEmail) return;
 
     setIsSendingCode(true);
@@ -76,7 +95,9 @@ export function AuthPage() {
       setStatus(error.status === 429 ? 'Too many requests. Wait a minute and try again.' : error.message);
     } else {
       setCodeSentToEmail(normalizedEmail);
-      setStatus(`Code sent to ${normalizedEmail}. Enter it below to sign in.`);
+      setStatus(
+        `Code sent to ${normalizedEmail}. Enter the 6-digit code below. If the email contains a link instead of a code, update Supabase Auth Email Templates to use {{ .Token }}.`
+      );
       setLastCodeSentAt(Date.now());
     }
 
@@ -84,14 +105,13 @@ export function AuthPage() {
   };
 
   const handleVerifyCode = async () => {
-    const normalizedEmail = codeSentToEmail ?? email.trim().toLowerCase();
-    if (!normalizedEmail || !code.trim() || emailError || codeError) return;
+    if (!signInEmail || !code.trim() || emailError || codeError) return;
 
     setIsVerifyingCode(true);
     setStatus(null);
 
     const { error } = await supabase.auth.verifyOtp({
-      email: normalizedEmail,
+      email: signInEmail,
       token: code.trim(),
       type: 'email',
     });
@@ -155,7 +175,9 @@ export function AuthPage() {
         {emailError ? <p className="error">Enter a valid email address.</p> : null}
         <button
           className="btn btn-primary"
-          disabled={isSendingCode || isVerifyingCode || isLoading || !email || emailError || Boolean(lastCodeSentAt)}
+          disabled={
+            isSendingCode || isVerifyingCode || isLoading || !normalizedEmail || emailError || Boolean(lastCodeSentAt)
+          }
           onClick={handleSendCode}
           type="button">
           {cooldownSeconds > 0 ? `Try again in ${cooldownSeconds}s` : 'Send code'}
@@ -166,14 +188,14 @@ export function AuthPage() {
           <input
             className="input"
             inputMode="numeric"
-            onChange={(event) => setCode(event.target.value)}
+            onChange={(event) => setCode(event.target.value.replace(/\D/g, '').slice(0, 6))}
             value={code}
           />
         </label>
         {codeError ? <p className="error">Enter the full code from your email.</p> : null}
         <button
           className="btn btn-outline"
-          disabled={isSendingCode || isVerifyingCode || !email || emailError || !code.trim() || codeError}
+          disabled={isSendingCode || isVerifyingCode || !signInEmail || emailError || !code.trim() || codeError}
           onClick={handleVerifyCode}
           type="button">
           {isVerifyingCode ? 'Verifying...' : 'Verify code and sign in'}

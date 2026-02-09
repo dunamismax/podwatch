@@ -9,6 +9,7 @@ export const supabase = createClient(
     auth: {
       autoRefreshToken: true,
       persistSession: true,
+      // Keep callback parsing disabled so auth remains code-entry only in-app.
       detectSessionInUrl: false,
     },
   }

@@ -100,11 +100,22 @@ EXPO_PUBLIC_SUPABASE_ANON_KEY=...
 `src/lib/env.ts` validates env values with Zod at startup.  
 After editing `.env`, restart the dev server.
 
-### 3) Apply schema + policies
+### 3) Configure Supabase Auth for code login (required)
+
+In Supabase Dashboard:
+
+1. Go to `Authentication -> Providers -> Email` and keep email sign-in enabled.
+2. Go to `Authentication -> Email Templates`.
+3. For templates used in email sign-in (`Magic Link`, and `Confirm signup` if you allow new users), use `{{ .Token }}` in the email body.
+4. Remove `{{ .ConfirmationURL }}` from those templates so users receive a one-time code instead of a login link.
+
+Supabase sends OTP vs magic link based on the template variables, not only the client SDK call.
+
+### 4) Apply schema + policies
 
 Run `scripts/supabase-setup.sql` in the Supabase SQL editor.
 
-### 4) Run the app
+### 5) Run the app
 
 ```bash
 npm run dev

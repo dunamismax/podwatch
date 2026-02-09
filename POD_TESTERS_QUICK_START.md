@@ -10,7 +10,7 @@ Ask the organizer for the latest Pod Dashboard web link, or use `https://poddash
 
 1. Open `/auth`.
 2. Enter your email and request a one-time code.
-3. Check your email for the code.
+3. Check your email for the 6-digit code (not a login link).
 4. Enter the code in the app to sign in.
 
 ## 3) Join your pod
