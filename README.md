@@ -1,111 +1,110 @@
+<p align="center">
+  <img src="public/favicon.svg" alt="PodDashboard logo" width="84" />
+</p>
+
+<p align="center">
+  A Laravel + Livewire app for organizing tabletop play pods, memberships, and upcoming events with passwordless email OTP login.
+</p>
+
 # PodDashboard
 
-Magic Pod Dashboard is a Laravel + Livewire app for organizing tabletop play groups (“pods”), tracking memberships, and viewing upcoming events. It is built for developers who want a clean Laravel 12 codebase with OTP authentication and a fast local workflow.
+PodDashboard helps playgroups coordinate recurring pods and sessions without heavy tooling. Players sign in with email OTP, create pods, and track upcoming events scoped to memberships.
 
-![PHP](https://img.shields.io/badge/PHP-8.2%2B-777BB4?logo=php&logoColor=white)
+## Trust Signals
+
+![PHP](https://img.shields.io/badge/PHP-8.4%2B-777BB4?logo=php&logoColor=white)
 ![Laravel](https://img.shields.io/badge/Laravel-12-FF2D20?logo=laravel&logoColor=white)
 ![Livewire](https://img.shields.io/badge/Livewire-4-4E56A6)
-![Pest](https://img.shields.io/badge/Tests-Pest%204-22C55E)
+![Pest](https://img.shields.io/badge/Tested_with-Pest_4-22C55E)
 ![License](https://img.shields.io/badge/License-MIT-blue)
 
 ## Quick Start
 
 ### Prerequisites
 
-- PHP `8.2+` (repo currently runs on PHP `8.4.1`)
-- Composer `2+`
-- Node.js + npm (required for Vite asset build)
-- Database server (PostgreSQL is the default in `.env.example`)
+- PHP 8.4+
+- Composer 2+
+- Node.js 22+ (matches CI)
+- npm 10+
+- PostgreSQL 14+ (default `.env.example`) or another Laravel-supported database
 
-### Run Locally
+### Run
 
 ```bash
+git clone <your-repo-url> poddashboard
+cd poddashboard
 cp .env.example .env
 composer install
 npm install
 php artisan key:generate
 php artisan migrate
-npm run build
-php artisan serve
+composer dev
 ```
 
-Expected result: app available at `http://127.0.0.1:8000` with login at `http://127.0.0.1:8000/login`.
+Expected result:
 
-### Verified Commands (This Repo Session)
+- App is available at `http://localhost:8000`
+- Login page is available at `http://localhost:8000/login`
+- Health check responds at `http://localhost:8000/up`
+
+Optional local seed user:
 
 ```bash
-php artisan test --compact
-npm run build
-php artisan route:list
+php artisan db:seed
 ```
+
+Use `test@example.com` on the login page to request an OTP code.
 
 ## Features
 
-### Authentication
-
-- Email OTP sign-in flow with expiring one-time codes
-- Session-based authentication for protected pages
-- OTP send and verify throttling to reduce abuse and brute-force attempts
-
-### Pod Management
-
-- Create pods from the dashboard
-- Automatic owner membership creation on pod creation
-- View all pods for the authenticated user
-
-### Event Visibility
-
-- Upcoming events feed scoped to pods the user belongs to
-- JSON API endpoint for upcoming events
-
-### API Endpoints
-
-- `GET /api/pods` lists current user pods
-- `POST /api/pods` creates a pod
-- `GET /api/events` lists upcoming events
+- Passwordless OTP authentication with 6-digit email codes.
+- OTP expiry and one-time consumption enforcement.
+- OTP send and verify rate limits to reduce abuse and brute-force attempts.
+- Pod creation from the dashboard with automatic owner membership assignment.
+- Upcoming events feed limited to pods the authenticated user belongs to.
+- Session-authenticated JSON API for pod listing/creation and upcoming events.
+- API input validation with explicit malformed JSON handling.
 
 ## Tech Stack
 
 | Layer | Technology | Purpose |
 |---|---|---|
-| Runtime | [PHP](https://www.php.net/) 8.2+ | Application runtime |
-| Framework | [Laravel](https://laravel.com/docs/12.x) 12 | Web framework, routing, validation, auth/session plumbing |
-| UI | [Livewire](https://livewire.laravel.com/) 4 | Reactive server-driven UI |
-| Components | [Flux UI](https://fluxui.dev/) 2 (free) | UI component primitives |
-| Auth | [Laravel Fortify](https://laravel.com/docs/12.x/fortify) | Headless auth backend utilities |
-| Frontend Build | [Vite](https://vite.dev/) 7 + [Tailwind CSS](https://tailwindcss.com/) 4 | Asset pipeline and styling |
-| Database | PostgreSQL (default config), SQLite in tests | Persistent data + fast test runtime |
-| Testing | [Pest](https://pestphp.com/) 4 + PHPUnit 12 | Feature and unit testing |
-| Formatting | [Laravel Pint](https://laravel.com/docs/12.x/pint) | Code style enforcement |
+| Backend | [Laravel 12](https://laravel.com/docs/12.x) | Framework, routing, Eloquent, middleware |
+| Reactive UI | [Livewire 4](https://livewire.laravel.com/) | Server-driven reactive pages |
+| UI Components | [Flux UI Free](https://fluxui.dev/) | Shared UI primitives and starter-kit components |
+| Authentication | Custom OTP service + Laravel session auth | Passwordless email login flow |
+| Styling/Build | [Tailwind CSS 4](https://tailwindcss.com/) + [Vite 7](https://vite.dev/) | Styling and frontend bundling |
+| Database | PostgreSQL (default env), SQLite for tests | Persistent app data and deterministic tests |
+| Testing | [Pest 4](https://pestphp.com/) + PHPUnit 12 | Feature and unit test coverage |
+| Code Style | [Laravel Pint](https://laravel.com/docs/12.x/pint) | Automated PHP formatting |
 
 ## Project Structure
 
-```text
+```sh
 poddashboard/
 ├── app/
-│   ├── Http/Controllers/Api/    # JSON API controllers for pods/events
-│   ├── Http/Requests/           # API validation requests
-│   ├── Livewire/                # Livewire page components (login/verify/dashboard)
-│   ├── Models/                  # Eloquent models (User, Pod, Event, etc.)
-│   ├── Providers/               # Service provider bootstrapping and defaults
-│   └── Services/                # OTP auth service logic
+│   ├── Livewire/                        # OTP login/verify pages and dashboard page
+│   ├── Services/OtpAuthService.php      # OTP issue/verify logic and login handoff
+│   ├── Http/Controllers/Api/            # API endpoints for pods and events
+│   ├── Http/Requests/                   # API request validation
+│   ├── Models/                          # User, Pod, PodMember, Event, OtpCode
+│   └── Mail/OtpCodeMail.php             # OTP email message
 ├── database/
-│   ├── migrations/              # Schema for users, pods, events, otp codes, etc.
-│   └── factories/               # Test model factories
+│   ├── migrations/                      # Users, pods, members, events, otp_codes schema
+│   ├── factories/                       # Model factories for tests
+│   └── seeders/DatabaseSeeder.php       # Optional local seed data
 ├── resources/
-│   ├── views/                   # Blade and Livewire view templates
-│   ├── css/                     # Tailwind CSS entry
-│   └── js/                      # Vite JS entry
+│   ├── views/livewire/                  # Login, verify, and dashboard views
+│   ├── views/emails/                    # OTP email templates
+│   └── css + js                         # Vite entrypoints
 ├── routes/
-│   ├── web.php                  # Main web + API routes
-│   ├── console.php              # Console route definitions
-│   └── settings.php             # Settings routes reference
+│   └── web.php                          # Home redirect, auth pages, dashboard, API routes
 ├── tests/
-│   ├── Feature/                 # End-to-end behavior tests
-│   └── Unit/                    # Unit tests
-├── composer.json                # PHP dependencies and Composer scripts
-├── package.json                 # Frontend dependencies and npm scripts
-└── phpunit.xml                  # Test configuration
+│   ├── Feature/OtpAuthenticationTest.php # OTP auth flow and throttling coverage
+│   └── Feature/ApiEndpointsTest.php     # Pods/events API behavior coverage
+├── .github/workflows/                   # CI lint + tests workflows
+├── composer.json                        # PHP dependencies + workflow scripts
+└── package.json                         # Frontend scripts and dependencies
 ```
 
 ## Development Workflow and Common Commands
@@ -123,9 +122,7 @@ php artisan migrate
 ### Run
 
 ```bash
-php artisan serve
-npm run dev
-composer run dev
+composer dev
 ```
 
 ### Test
@@ -133,15 +130,13 @@ composer run dev
 ```bash
 php artisan test --compact
 php artisan test --compact tests/Feature/OtpAuthenticationTest.php
-composer test
 ```
 
 ### Lint and Format
 
 ```bash
+composer lint
 vendor/bin/pint --dirty --format agent
-composer run lint
-composer run test:lint
 ```
 
 ### Build
@@ -150,74 +145,59 @@ composer run test:lint
 npm run build
 ```
 
-Notes:
+### Deploy (Generic Laravel Flow)
 
-- `composer run dev` starts server, queue listener, log tailing, and Vite in one command.
-- `composer run setup` exists for first-time bootstrap; it was not re-run in this session because dependencies were already installed.
+```bash
+php artisan down
+npm run build
+php artisan migrate --force
+php artisan optimize
+php artisan up
+```
+
+Command verification notes for this README rewrite:
+
+- Verified in this environment: `php artisan --version`, `php artisan route:list`, `php artisan test --compact tests/Feature/OtpAuthenticationTest.php`, `npm run build`.
+- Not executed in this rewrite: `composer dev`, full production deploy sequence, and `php artisan migrate` against local PostgreSQL.
 
 ## Deployment and Operations
 
-This repository does not include infra manifests (Docker/Kubernetes/Terraform), but it follows standard Laravel deployment patterns.
+This repository does not ship platform-specific infra manifests (no committed Docker/Kubernetes/Terraform files). Deploy as a standard Laravel app on your preferred platform.
 
-### Deployment Model
-
-- PHP application server (Nginx/Apache + PHP-FPM) with built frontend assets from `npm run build`
-
-### Required Environment Setup
-
-- Application key: `APP_KEY`
-- App URL: `APP_URL`
-- Database credentials (`DB_*` or `DATABASE_URL`)
-- SMTP settings for OTP email delivery (`MAIL_*` / `SMTP_*`)
-
-### Operational Entry Points
-
-- Health check route: `GET /up`
-- App logs: `storage/logs/laravel.log`
-- Live log tailing in development: `php artisan pail`
+- Build assets with `npm run build` before release.
+- Run migrations with `php artisan migrate --force` during deployment.
+- Use `GET /up` as a basic health endpoint.
+- Use `php artisan pail` for live log tailing.
+- Roll back the latest migration batch with `php artisan migrate:rollback` if needed.
 
 ## Security and Reliability Notes
 
-### Authentication Model
-
-- OTP-based email sign-in backed by Laravel session auth
-- OTP codes are stored as hashes and have expiry/consumption tracking
-
-### Abuse Protection
-
-- Request throttling for OTP issuance
-- Attempt throttling for OTP verification
-
-### Input and Transport Safeguards
-
-- Request validation in Livewire actions and Form Requests
-- Eloquent ORM usage for query safety and maintainability
-- CSRF protection via Laravel `web` middleware stack
-
-### Quality Controls
-
-- Pest feature tests cover authentication and API behavior
-- Pint formatting enforced via Composer scripts
+- Authentication uses email OTP codes with server-side hashing (`sha256`) and expiry/consumption tracking.
+- OTP issuance and verification are rate-limited per email and IP.
+- Protected dashboard access requires authenticated session middleware.
+- API endpoints return `401` for unauthenticated requests.
+- Validation is enforced in Livewire actions and `FormRequest` classes.
+- CI runs lint and tests via GitHub Actions workflows.
 
 ## Documentation
 
 | Path | Purpose |
 |---|---|
-| [`README.md`](README.md) | Primary onboarding and workflow guide |
-| [`AGENTS.md`](AGENTS.md) | Repository-specific engineering instructions and constraints |
-| [`.env.example`](.env.example) | Environment variable template and defaults |
-| [`routes/web.php`](routes/web.php) | Source of truth for user-facing and API routes |
-| [`tests/Feature`](tests/Feature) | Executable behavior documentation via feature tests |
+| [AGENTS.md](AGENTS.md) | Repository-specific engineering guidance |
+| [routes/web.php](routes/web.php) | Source of truth for web and API routes |
+| [app/Services/OtpAuthService.php](app/Services/OtpAuthService.php) | OTP lifecycle and authentication logic |
+| [tests/Feature/OtpAuthenticationTest.php](tests/Feature/OtpAuthenticationTest.php) | OTP auth and throttle behavior tests |
+| [tests/Feature/ApiEndpointsTest.php](tests/Feature/ApiEndpointsTest.php) | API authorization and response behavior tests |
+| [.github/workflows/tests.yml](.github/workflows/tests.yml) | CI test pipeline definition |
+| [.github/workflows/lint.yml](.github/workflows/lint.yml) | CI lint pipeline definition |
 
 ## Contributing
 
-Contributions are welcome via pull requests.
+Contributions are welcome through pull requests.
 
-1. Create a branch for your change.
-2. Run formatting and tests locally.
-3. Open a PR with a clear summary and test evidence.
-
-If you plan to make larger changes, open an issue first to align on scope.
+1. Create a feature branch.
+2. Run lint and tests locally (`composer lint` and `php artisan test --compact`).
+3. Open a PR with a clear summary of behavior changes and test impact.
 
 ## License
 
