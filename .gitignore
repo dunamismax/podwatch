@@ -1,35 +1,23 @@
-# Node / package managers
-node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-
-dist/
-build/
-coverage/
-.react-router/
-bun.lockb
-
-# Native build artifacts
-android/.gradle/
-android/local.properties
-android/app/build/
-android/build/
-
-# Logs
-logs/
-*.log
-
-# OS / editor
-.DS_Store
-Thumbs.db
-.vscode/
-.idea/
-.swc/
-
-# Env files
+/.phpunit.cache
+/node_modules
+/public/build
+/public/hot
+/public/storage
+/storage/*.key
+/storage/pail
+/vendor
 .env
-.env.*
-!.env.example
-
+.env.backup
+.env.production
+.phpactor.json
+.phpunit.result.cache
+Homestead.json
+Homestead.yaml
+npm-debug.log
+yarn-error.log
+/auth.json
+/.fleet
+/.idea
+/.nova
+/.vscode
+/.zed
