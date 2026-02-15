@@ -24,12 +24,14 @@ class PodController extends Controller
             ->select('pods.id', 'pods.name', 'pods.description')
             ->orderByDesc('pods.created_at')
             ->get()
-            ->map(function (Pod $pod): array {
+            ->map(function ($pod): array {
+                $description = $pod->getAttribute('description');
+
                 return [
-                    'id' => $pod->id,
-                    'name' => $pod->name,
-                    'description' => $pod->description,
-                    'role' => $pod->pivot?->role,
+                    'id' => (int) $pod->getAttribute('id'),
+                    'name' => (string) $pod->getAttribute('name'),
+                    'description' => is_string($description) ? $description : null,
+                    'role' => data_get($pod, 'pivot.role'),
                 ];
             });
 

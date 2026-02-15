@@ -26,6 +26,16 @@
                     </a>
                     <div class="flex items-center gap-2 sm:gap-3">
                         @auth
+                            @can('monitoring.pulse.view')
+                                <flux:link href="{{ url('/pulse') }}" class="hidden text-zinc-300 hover:text-zinc-100 sm:inline">
+                                    Pulse
+                                </flux:link>
+                            @endcan
+                            @can('monitoring.telescope.view')
+                                <flux:link href="{{ url('/telescope') }}" class="hidden text-zinc-300 hover:text-zinc-100 sm:inline">
+                                    Telescope
+                                </flux:link>
+                            @endcan
                             <flux:text class="hidden text-sm text-zinc-400 sm:inline">{{ auth()->user()->email }}</flux:text>
                             <form method="POST" action="{{ route('logout') }}">
                                 @csrf

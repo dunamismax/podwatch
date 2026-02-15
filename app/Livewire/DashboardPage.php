@@ -6,6 +6,7 @@ use App\Models\Event;
 use App\Models\Pod;
 use App\Models\PodMember;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
@@ -13,12 +14,16 @@ use Livewire\Component;
 
 class DashboardPage extends Component
 {
+    use AuthorizesRequests;
+
     public string $name = '';
 
     public string $description = '';
 
     public function createPod(): void
     {
+        $this->authorize('pods.create');
+
         $validated = $this->validate([
             'name' => ['required', 'string', 'min:2', 'max:120'],
             'description' => ['nullable', 'string', 'max:500'],

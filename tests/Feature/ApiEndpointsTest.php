@@ -8,12 +8,10 @@ use Illuminate\Support\Carbon;
 
 it('returns unauthorized for unauthenticated api requests', function (): void {
     $this->getJson('/api/pods')
-        ->assertStatus(401)
-        ->assertJson(['error' => 'Unauthorized']);
+        ->assertUnauthorized();
 
     $this->getJson('/api/events')
-        ->assertStatus(401)
-        ->assertJson(['error' => 'Unauthorized']);
+        ->assertUnauthorized();
 });
 
 it('creates a pod via api and lists pods for the authenticated user', function (): void {
@@ -90,4 +88,17 @@ it('lists upcoming events for the authenticated user', function (): void {
         ->assertJsonCount(1, 'events')
         ->assertJsonPath('events.0.title', 'Draft Night')
         ->assertJsonPath('events.0.podName', 'Event Pod');
+});
+
+it('forbids api access without api permission', function (): void {
+    $user = User::factory()->create([
+        'password' => null,
+    ]);
+
+    $user->syncRoles([]);
+    $user->syncPermissions([]);
+
+    $this->actingAs($user)
+        ->getJson('/api/pods')
+        ->assertForbidden();
 });

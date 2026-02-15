@@ -60,3 +60,16 @@ it('shows upcoming events for pods the user belongs to', function (): void {
         ->assertSee('Commander Night')
         ->assertSee('Guild Pod');
 });
+
+it('forbids dashboard access without dashboard permission', function (): void {
+    $user = User::factory()->create([
+        'password' => null,
+    ]);
+
+    $user->syncRoles([]);
+    $user->syncPermissions([]);
+
+    $this->actingAs($user)
+        ->get('/dashboard')
+        ->assertForbidden();
+});

@@ -26,13 +26,18 @@ class EventController extends Controller
             ->orderBy('scheduled_for')
             ->limit(20)
             ->get(['id', 'pod_id', 'title', 'location', 'scheduled_for'])
-            ->map(function (Event $event): array {
+            ->map(function ($event): array {
+                $scheduledFor = $event->getAttribute('scheduled_for');
+                $title = $event->getAttribute('title');
+                $location = $event->getAttribute('location');
+                $podName = data_get($event, 'pod.name');
+
                 return [
-                    'id' => $event->id,
-                    'podName' => $event->pod?->name,
-                    'title' => $event->title,
-                    'location' => $event->location,
-                    'scheduledFor' => $event->scheduled_for?->toJSON(),
+                    'id' => (int) $event->getAttribute('id'),
+                    'podName' => is_string($podName) ? $podName : null,
+                    'title' => is_string($title) ? $title : '',
+                    'location' => is_string($location) ? $location : null,
+                    'scheduledFor' => $scheduledFor instanceof \DateTimeInterface ? $scheduledFor->format(\DateTimeInterface::ATOM) : null,
                 ];
             });
 

@@ -33,6 +33,7 @@ class FortifyServiceProvider extends ServiceProvider
         Fortify::requestPasswordResetLinkView('auth.forgot-password');
         Fortify::resetPasswordView('auth.reset-password');
         Fortify::confirmPasswordView('auth.confirm-password');
+        Fortify::twoFactorChallengeView('auth.two-factor-challenge');
 
         Fortify::createUsersUsing(CreateNewUser::class);
         Fortify::updateUserProfileInformationUsing(UpdateUserProfileInformation::class);

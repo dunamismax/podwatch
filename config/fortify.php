@@ -145,6 +145,12 @@ return [
     'features' => [
         Features::registration(),
         Features::resetPasswords(),
+        Features::updateProfileInformation(),
+        Features::updatePasswords(),
+        Features::twoFactorAuthentication([
+            'confirm' => true,
+            'confirmPassword' => true,
+        ]),
     ],
 
 ];

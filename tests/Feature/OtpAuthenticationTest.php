@@ -23,6 +23,12 @@ it('renders authentication pages with flux assets', function (): void {
         ->assertSee('class="h-full dark"', false);
 });
 
+it('registers the two-factor challenge route', function (): void {
+    $response = $this->get('/two-factor-challenge');
+
+    expect($response->status())->not->toBe(404);
+});
+
 it('registers a user with the built-in auth flow', function (): void {
     $response = $this->post('/register', [
         'name' => 'New Player',
@@ -34,7 +40,10 @@ it('registers a user with the built-in auth flow', function (): void {
     $response->assertRedirect(route('dashboard', absolute: false));
 
     $this->assertAuthenticated();
-    expect(User::query()->where('email', 'player@example.com')->exists())->toBeTrue();
+    $user = User::query()->where('email', 'player@example.com')->first();
+
+    expect($user)->not->toBeNull();
+    expect($user?->hasRole('member'))->toBeTrue();
 });
 
 it('authenticates a user with valid credentials', function (): void {

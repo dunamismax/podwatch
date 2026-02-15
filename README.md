@@ -3,30 +3,13 @@
 </p>
 
 <p align="center">
-  Dark-themed TALL app for auth, pod management, and upcoming event visibility.
+  Dark-themed TALL app for authentication, role-aware pod management, and upcoming event visibility.
 </p>
 
 # PodDashboard
 
-PodDashboard is a focused TALL-stack application for organizing tabletop pods and events.  
-It uses Laravel Fortify for authentication, Livewire for server-driven UI, Flux UI for components, and Tailwind for styling.
-
-## Current Features
-
-- Dark-themed dashboard UI built with Flux components and Tailwind
-- Laravel Fortify auth flows:
-  - login/logout
-  - register
-  - forgot/reset password
-  - confirm password routes
-- Authenticated dashboard at `/dashboard`:
-  - create pods
-  - list your pods
-  - list upcoming events across pods you belong to
-- Session-authenticated JSON API:
-  - `GET /api/pods`
-  - `POST /api/pods`
-  - `GET /api/events`
+PodDashboard is a Laravel 12 + Livewire 4 application for organizing tabletop pods and events.
+It uses a server-driven UI with Flux components, headless auth via Fortify, and permission-based route protection.
 
 ## Tech Stack
 
@@ -34,17 +17,47 @@ It uses Laravel Fortify for authentication, Livewire for server-driven UI, Flux 
 - Livewire 4
 - Alpine.js (bundled via Livewire)
 - Flux UI Free
-- Tailwind CSS 4
-- Vite 7
-- Pest 4 / PHPUnit 12
+- Tailwind CSS 4 + Vite 7
+- Laravel Fortify (including 2FA challenge flow)
+- Spatie Laravel Permission (RBAC)
+- Laravel Telescope
+- Laravel Pulse
+- Laravel Pail
+- Pest 4 + PHPUnit 12
+- Laravel Pint
+- Larastan (PHPStan)
+- SQLite by default for local/testing (`.env.example`), with PostgreSQL/MySQL-ready config
+
+## Current Features
+
+- Flux + Livewire dashboard UI
+- Fortify auth flows:
+  - login/logout
+  - register
+  - forgot/reset password
+  - confirm password
+  - two-factor challenge (`/two-factor-challenge`)
+- RBAC with Spatie roles/permissions
+  - default roles: `member`, `admin`
+  - new registrations receive `member`
+- Permission-protected app routes
+  - dashboard requires `dashboard.view`
+  - API requires `api.access`
+  - pod creation API additionally requires `api.pods.create`
+- Session-authenticated JSON API:
+  - `GET /api/pods`
+  - `POST /api/pods`
+  - `GET /api/events`
+- Monitoring dashboards:
+  - Pulse at `/pulse` (permission-gated)
+  - Telescope at `/telescope` (permission-gated)
 
 ## Requirements
 
-- PHP 8.2+ (currently tested in this repo on 8.4.1)
+- PHP 8.2+ (tested in this repo with 8.4.1)
 - Composer 2+
-- Node.js 22+ (Node 24 also works)
+- Node.js 22+
 - npm 10+
-- PostgreSQL 14+ by default (`.env.example`), or another Laravel-supported database
 
 ## Setup
 
@@ -54,7 +67,7 @@ It uses Laravel Fortify for authentication, Livewire for server-driven UI, Flux 
 composer setup
 ```
 
-`composer setup` installs PHP + JS dependencies, creates `.env` if needed, generates the app key, runs migrations, and builds frontend assets.
+`composer setup` installs dependencies, creates `.env`, generates the app key, ensures `database/database.sqlite` exists, runs migrations, and builds frontend assets.
 
 ### Manual setup
 
@@ -63,6 +76,7 @@ cp .env.example .env
 composer install
 npm install
 php artisan key:generate
+php -r "file_exists('database/database.sqlite') || touch('database/database.sqlite');"
 php artisan migrate
 npm run build
 ```
@@ -82,31 +96,21 @@ This starts:
 
 If UI changes are not visible, run `npm run dev` or `npm run build`.
 
-## Route Surface (Current)
+## Authorization Model
 
-### Web
+Permissions currently seeded:
 
-- `GET /` redirects to `/dashboard`
-- `GET /dashboard` (auth)
-- `GET /login` / `POST /login`
-- `POST /logout`
-- `GET /register` / `POST /register`
-- `GET /forgot-password` / `POST /forgot-password`
-- `GET /reset-password/{token}` / `POST /reset-password`
-- `GET /user/confirm-password` / `POST /user/confirm-password`
-- `GET /user/confirmed-password-status`
-- `GET /up`
+- `dashboard.view`
+- `pods.create`
+- `api.access`
+- `api.pods.create`
+- `monitoring.pulse.view`
+- `monitoring.telescope.view`
 
-### API (session-authenticated)
+Seed behavior:
 
-- `GET /api/pods`
-- `POST /api/pods`
-- `GET /api/events`
-
-Notes:
-
-- API endpoints rely on the authenticated session user (`$request->user()`); unauthenticated requests return `401`.
-- `POST /api/pods` expects valid JSON and returns `400` when the request body is malformed.
+- `php artisan db:seed` creates `test@example.com` / `password`
+- seeded user is assigned `admin`
 
 ## Example API Request
 
@@ -137,23 +141,14 @@ Success response (`201`):
 }
 ```
 
-## Seed Data
-
-```bash
-php artisan db:seed
-```
-
-Default seeded user:
-
-- Email: `test@example.com`
-- Password: `password`
-
 ## Quality Commands
 
 ```bash
 php artisan test --compact
 php artisan test --compact tests/Feature/OtpAuthenticationTest.php
 php artisan test --compact tests/Feature/DashboardFeatureTest.php
+php artisan test --compact tests/Feature/ApiEndpointsTest.php
+composer analyse
 composer lint
 vendor/bin/pint --dirty --format agent
 npm run build
@@ -163,35 +158,29 @@ npm run build
 
 ```text
 app/
-  Actions/Fortify/           Fortify user/password actions
-  Http/Controllers/Api/      API endpoints
-  Http/Requests/             API request validation
-  Livewire/                  Dashboard Livewire component
-  Models/                    User, Pod, PodMember, Event
-  Providers/FortifyServiceProvider.php
+  Actions/Fortify/             Fortify user/password actions
+  Http/Controllers/Api/        API endpoints
+  Http/Requests/               API request validation
+  Livewire/                    Dashboard Livewire component
+  Models/                      User, Pod, PodMember, Event
+  Providers/                   App, Fortify, Telescope providers
+config/
+  fortify.php                  Fortify features (incl. 2FA)
+  permission.php               Spatie permission config
+  pulse.php                    Pulse config
+  telescope.php                Telescope config
+database/
+  migrations/                  Core + Pulse + Telescope + Spatie + 2FA columns
+  seeders/                     AccessControlSeeder + DatabaseSeeder
 resources/views/
-  auth/                      Fortify auth views (Flux UI)
-  layouts/pod.blade.php      Global app shell
-  livewire/                  Dashboard view
-routes/web.php               Web + API route definitions
-tests/Feature/               Auth, dashboard, and API behavior tests
+  auth/                        Fortify auth views (Flux)
+  livewire/                    Dashboard view
+  layouts/pod.blade.php        Global app shell
+  vendor/pulse/dashboard.blade.php
+routes/web.php                 Web + API route definitions
+tests/Feature/                 Auth, dashboard, and API behavior tests
+phpstan.neon                   Larastan/PHPStan config
 ```
-
-## Security Notes
-
-- Auth is provided by Laravel Fortify (web guard).
-- Login is rate-limited at 5 attempts/minute by email+IP.
-- Passwords are hashed via Laravel’s user password casting/hashing pipeline.
-- Dashboard and API responses are scoped to the authenticated user.
-
-## Reference Files
-
-- `routes/web.php` for route definitions
-- `app/Providers/FortifyServiceProvider.php` for auth views and rate limiter
-- `tests/Feature/OtpAuthenticationTest.php` for auth flow coverage
-- `tests/Feature/DashboardFeatureTest.php` for dashboard behavior
-- `tests/Feature/ApiEndpointsTest.php` for API behavior and auth responses
-- `AGENTS.md` for repository-specific agent instructions
 
 ## License
 
