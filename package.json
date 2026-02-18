@@ -1,27 +1,51 @@
 {
-    "$schema": "https://www.schemastore.org/package.json",
-    "private": true,
-    "type": "module",
-    "scripts": {
-        "build": "vite build",
-        "dev:vite": "vite",
-        "dev:server": "php artisan serve",
-        "dev:queue": "php artisan queue:listen --tries=1 --timeout=0",
-        "dev:logs": "php artisan pail --timeout=0",
-        "dev": "concurrently -c \"#93c5fd,#c4b5fd,#fb7185,#fdba74\" \"bun run dev:server\" \"bun run dev:queue\" \"bun run dev:logs\" \"bun run dev:vite\" --names=server,queue,logs,vite --kill-others"
-    },
-    "dependencies": {
-        "@tailwindcss/vite": "^4.1.11",
-        "autoprefixer": "^10.4.20",
-        "axios": "^1.7.4",
-        "concurrently": "^9.0.1",
-        "laravel-vite-plugin": "^2.0",
-        "tailwindcss": "^4.0.7",
-        "vite": "^7.0.4"
-    },
-    "optionalDependencies": {
-        "@rollup/rollup-linux-x64-gnu": "4.9.5",
-        "@tailwindcss/oxide-linux-x64-gnu": "^4.0.1",
-        "lightningcss-linux-x64-gnu": "^1.29.1"
-    }
+  "name": "poddashboard",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bunx concurrently -c \"#60a5fa,#34d399\" \"bun run dev:api\" \"bun run dev:web\" --names=api,web",
+    "dev:api": "bun run --watch server/index.ts",
+    "dev:web": "react-router dev --port 5173",
+    "build": "react-router build",
+    "start": "bun run server/index.ts",
+    "lint": "bunx @biomejs/biome check .",
+    "format": "bunx @biomejs/biome format --write .",
+    "typecheck": "bunx tsc --noEmit",
+    "db:generate": "bunx drizzle-kit generate",
+    "db:migrate": "bun run db/migrate.ts",
+    "db:seed": "bun run db/seed.ts",
+    "scry:doctor": "bun run scripts/cli.ts doctor"
+  },
+  "dependencies": {
+    "@auth/core": "^0.41.0",
+    "@auth/drizzle-adapter": "^1.10.0",
+    "@radix-ui/react-slot": "^1.2.3",
+    "@tailwindcss/vite": "^4.1.12",
+    "bcryptjs": "^3.0.2",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "concurrently": "^9.2.1",
+    "drizzle-orm": "^0.44.5",
+    "next-auth": "^5.0.0-beta.30",
+    "pg": "^8.16.3",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "react-router": "^7.9.5",
+    "tailwind-merge": "^3.3.1",
+    "tailwindcss": "^4.1.12",
+    "zod": "^4.1.11"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.2.4",
+    "@react-router/dev": "^7.9.5",
+    "@react-router/node": "^7.9.5",
+    "@types/bun": "^1.2.22",
+    "@types/node": "^24.3.0",
+    "@types/pg": "^8.15.5",
+    "@types/react": "^19.2.2",
+    "@types/react-dom": "^19.2.2",
+    "drizzle-kit": "^0.31.4",
+    "typescript": "^5.9.2",
+    "vite": "^7.1.5"
+  }
 }
