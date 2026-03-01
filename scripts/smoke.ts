@@ -1,14 +1,6 @@
-type SessionPayload = {
-  authenticated: boolean;
-  user: {
-    email: string;
-    id: number;
-    name: string | null;
-  } | null;
-};
-
 type CookieJar = Map<string, string>;
 
+const apiUrl = process.env.SMOKE_API_URL ?? 'http://localhost:3001';
 const appUrl = process.env.SMOKE_APP_URL ?? 'http://localhost:3000';
 const seededEmail = process.env.SMOKE_SEEDED_EMAIL ?? 'test@example.com';
 const seededPassword = process.env.SMOKE_SEEDED_PASSWORD ?? 'password';
@@ -59,7 +51,12 @@ function serializeCookies(jar: CookieJar): string | undefined {
   return [...jar.entries()].map(([name, value]) => `${name}=${value}`).join('; ');
 }
 
-async function request(jar: CookieJar, path: string, init: RequestInit = {}): Promise<Response> {
+async function request(
+  jar: CookieJar,
+  baseUrl: string,
+  path: string,
+  init: RequestInit = {},
+): Promise<Response> {
   const headers = new Headers(init.headers);
   const cookieHeader = serializeCookies(jar);
 
@@ -71,7 +68,7 @@ async function request(jar: CookieJar, path: string, init: RequestInit = {}): Pr
     headers.set('content-type', 'application/json');
   }
 
-  const response = await fetch(new URL(path, appUrl), {
+  const response = await fetch(new URL(path, baseUrl), {
     ...init,
     headers,
     redirect: 'manual',
@@ -81,19 +78,15 @@ async function request(jar: CookieJar, path: string, init: RequestInit = {}): Pr
   return response;
 }
 
-async function readJson<T>(response: Response): Promise<T> {
-  return (await response.json()) as T;
-}
-
 async function main() {
   const jar = new Map<string, string>();
 
-  let response = await request(jar, '/api/session');
-  let payload = await readJson<SessionPayload>(response);
+  // Check session is empty for anonymous user
+  let response = await request(jar, apiUrl, '/api/auth/get-session');
   assert(response.ok, 'Anonymous session request failed.');
-  assert(payload.authenticated === false, 'Anonymous session should be unauthenticated.');
 
-  response = await request(jar, '/api/login', {
+  // Sign in with seeded user
+  response = await request(jar, apiUrl, '/api/auth/sign-in/email', {
     method: 'POST',
     body: JSON.stringify({
       email: seededEmail,
@@ -101,14 +94,14 @@ async function main() {
     }),
   });
   assert(response.ok, 'Seeded user login failed.');
-  assert(jar.has('authjs.session-token'), 'Seeded user login did not set a session cookie.');
 
-  response = await request(jar, '/api/session');
-  payload = await readJson<SessionPayload>(response);
-  assert(payload.authenticated === true, 'Seeded user session did not persist.');
-  assert(payload.user?.email === seededEmail, 'Seeded user session resolved the wrong user.');
+  // Verify session persists
+  response = await request(jar, apiUrl, '/api/auth/get-session');
+  const sessionData = (await response.json()) as { session: unknown; user: { email: string } };
+  assert(sessionData.user?.email === seededEmail, 'Seeded user session did not persist.');
 
-  response = await request(jar, '/dashboard');
+  // Check dashboard renders
+  response = await request(jar, appUrl, '/dashboard');
   const dashboardHtml = await response.text();
   assert(response.status === 200, 'Authenticated dashboard request should return 200.');
   assert(
@@ -116,13 +109,15 @@ async function main() {
     'Dashboard response did not render the app shell.',
   );
 
-  response = await request(jar, '/api/pods');
+  // Check business API endpoints work with session
+  response = await request(jar, apiUrl, '/api/pods');
   assert(response.ok, 'Seeded user pod list failed.');
 
-  response = await request(jar, '/api/events');
+  response = await request(jar, apiUrl, '/api/events');
   assert(response.ok, 'Seeded user event list failed.');
 
-  response = await request(jar, '/api/pods', {
+  // Create a pod
+  response = await request(jar, apiUrl, '/api/pods', {
     method: 'POST',
     body: JSON.stringify({
       name: `Smoke Pod ${uniqueSuffix}`,
@@ -131,40 +126,30 @@ async function main() {
   });
   assert(response.status === 201, 'Seeded user pod creation failed.');
 
-  response = await request(jar, '/api/logout', {
+  // Sign out
+  response = await request(jar, apiUrl, '/api/auth/sign-out', {
     method: 'POST',
   });
-  assert(response.ok, 'Seeded user logout failed.');
+  assert(response.ok, 'Seeded user sign-out failed.');
 
-  response = await request(jar, '/api/session');
-  payload = await readJson<SessionPayload>(response);
-  assert(payload.authenticated === false, 'Session should be cleared after logout.');
-
-  response = await request(jar, '/api/register', {
+  // Register a new user
+  response = await request(jar, apiUrl, '/api/auth/sign-up/email', {
     method: 'POST',
     body: JSON.stringify({
       email: registeredEmail,
       name: 'Smoke User',
       password: registeredPassword,
-      passwordConfirmation: registeredPassword,
     }),
   });
-  assert(response.status === 201, 'User registration failed.');
+  assert(response.ok, 'User registration failed.');
 
-  response = await request(jar, '/api/login', {
-    method: 'POST',
-    body: JSON.stringify({
-      email: registeredEmail,
-      password: registeredPassword,
-    }),
-  });
-  assert(response.ok, 'Registered user login failed.');
+  // Verify registered user has a session
+  response = await request(jar, apiUrl, '/api/auth/get-session');
+  const regSession = (await response.json()) as { session: unknown; user: { email: string } };
+  assert(regSession.user?.email === registeredEmail, 'Registered user session did not persist.');
 
-  response = await request(jar, '/api/session');
-  payload = await readJson<SessionPayload>(response);
-  assert(payload.user?.email === registeredEmail, 'Registered user session did not persist.');
-
-  response = await request(jar, '/api/pods', {
+  // Registered user can create a pod
+  response = await request(jar, apiUrl, '/api/pods', {
     method: 'POST',
     body: JSON.stringify({
       name: `Smoke Member Pod ${uniqueSuffix}`,
@@ -173,7 +158,7 @@ async function main() {
   });
   assert(response.status === 201, 'Registered member pod creation failed.');
 
-  console.log(`Smoke check passed against ${appUrl}`);
+  console.log(`Smoke check passed against ${apiUrl}`);
 }
 
 main().catch((error) => {

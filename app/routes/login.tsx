@@ -3,12 +3,10 @@ import { Link, useNavigate } from 'react-router';
 import { Button } from '~/components/ui/button';
 import { Card, CardBody } from '~/components/ui/card';
 import { Input } from '~/components/ui/input';
-import { useAuth } from '~/hooks/use-auth';
-import { getApiErrorMessage } from '~/lib/api-error';
+import { authClient } from '~/lib/auth-client';
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const { signIn } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -20,10 +18,14 @@ export default function LoginPage() {
     setPending(true);
 
     try {
-      await signIn({ email, password });
-      navigate('/dashboard');
-    } catch (caught) {
-      setError(getApiErrorMessage(caught, 'Invalid credentials.'));
+      const result = await authClient.signIn.email({ email, password });
+      if (result.error) {
+        setError(result.error.message ?? 'Invalid credentials.');
+      } else {
+        navigate('/dashboard');
+      }
+    } catch {
+      setError('Invalid credentials.');
     } finally {
       setPending(false);
     }

@@ -14,6 +14,8 @@ import {
 
 export const memberRoleEnum = pgEnum('member_role', ['owner', 'member']);
 
+// ─── Better Auth core tables ────────────────────────────────────────────────
+
 export const users = pgTable(
   'users',
   {
@@ -21,54 +23,63 @@ export const users = pgTable(
     name: varchar('name', { length: 255 }),
     email: varchar('email', { length: 255 }).notNull(),
     emailVerified: timestamp('email_verified_at', { withTimezone: true }),
-    passwordHash: varchar('password_hash', { length: 255 }).notNull(),
+    image: text('image'),
+    passwordHash: varchar('password_hash', { length: 255 }).notNull().default(''),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => [uniqueIndex('users_email_unique').on(table.email)],
 );
 
-export const accounts = pgTable(
-  'accounts',
+export const session = pgTable(
+  'session',
   {
+    id: text('id').primaryKey(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    token: text('token').notNull().unique(),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+    ipAddress: text('ip_address'),
+    userAgent: text('user_agent'),
     userId: integer('user_id')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
-    type: varchar('type', { length: 255 }).notNull(),
-    provider: varchar('provider', { length: 255 }).notNull(),
-    providerAccountId: varchar('provider_account_id', { length: 255 }).notNull(),
-    refreshToken: text('refresh_token'),
+  },
+  (table) => [index('session_user_id_idx').on(table.userId)],
+);
+
+export const account = pgTable(
+  'account',
+  {
+    id: text('id').primaryKey(),
+    accountId: text('account_id').notNull(),
+    providerId: text('provider_id').notNull(),
+    userId: integer('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
     accessToken: text('access_token'),
-    expiresAt: integer('expires_at'),
-    tokenType: varchar('token_type', { length: 255 }),
-    scope: varchar('scope', { length: 255 }),
+    refreshToken: text('refresh_token'),
     idToken: text('id_token'),
-    sessionState: varchar('session_state', { length: 255 }),
+    accessTokenExpiresAt: timestamp('access_token_expires_at', { withTimezone: true }),
+    refreshTokenExpiresAt: timestamp('refresh_token_expires_at', { withTimezone: true }),
+    scope: text('scope'),
+    password: text('password'),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
   },
-  (table) => [primaryKey({ columns: [table.provider, table.providerAccountId] })],
+  (table) => [index('account_user_id_idx').on(table.userId)],
 );
 
-export const sessions = pgTable(
-  'sessions',
-  {
-    sessionToken: varchar('session_token', { length: 255 }).primaryKey(),
-    userId: integer('user_id')
-      .notNull()
-      .references(() => users.id, { onDelete: 'cascade' }),
-    expires: timestamp('expires', { withTimezone: true }).notNull(),
-  },
-  (table) => [index('sessions_user_id_idx').on(table.userId)],
-);
+export const verification = pgTable('verification', {
+  id: text('id').primaryKey(),
+  identifier: text('identifier').notNull(),
+  value: text('value').notNull(),
+  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+});
 
-export const verificationTokens = pgTable(
-  'verification_tokens',
-  {
-    identifier: varchar('identifier', { length: 255 }).notNull(),
-    token: varchar('token', { length: 255 }).notNull(),
-    expires: timestamp('expires', { withTimezone: true }).notNull(),
-  },
-  (table) => [primaryKey({ columns: [table.identifier, table.token] })],
-);
+// ─── Application tables ─────────────────────────────────────────────────────
 
 export const pods = pgTable(
   'pods',

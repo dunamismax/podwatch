@@ -1,12 +1,5 @@
-import {
-  handleEventsIndex,
-  handleLogin,
-  handleLogout,
-  handlePodsCreate,
-  handlePodsIndex,
-  handleRegister,
-  handleSession,
-} from './api';
+import { handleEventsIndex, handlePodsCreate, handlePodsIndex } from './api';
+import { auth } from './auth';
 import { env } from './env';
 import { json } from './http';
 import { ensureAccessControlBootstrap } from './permissions';
@@ -18,20 +11,9 @@ const server = Bun.serve({
   async fetch(request) {
     const url = new URL(request.url);
 
-    if (url.pathname === '/api/session' && request.method === 'GET') {
-      return handleSession(request);
-    }
-
-    if (url.pathname === '/api/login' && request.method === 'POST') {
-      return handleLogin(request);
-    }
-
-    if (url.pathname === '/api/logout' && request.method === 'POST') {
-      return handleLogout(request);
-    }
-
-    if (url.pathname === '/api/register' && request.method === 'POST') {
-      return handleRegister(request);
+    // Better Auth handles all /api/auth/* routes
+    if (url.pathname.startsWith('/api/auth')) {
+      return auth.handler(request);
     }
 
     if (url.pathname === '/api/pods' && request.method === 'GET') {

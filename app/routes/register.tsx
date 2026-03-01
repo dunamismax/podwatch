@@ -3,13 +3,10 @@ import { Link, useNavigate } from 'react-router';
 import { Button } from '~/components/ui/button';
 import { Card, CardBody } from '~/components/ui/card';
 import { Input } from '~/components/ui/input';
-import { useAuth } from '~/hooks/use-auth';
-import { apiFetch } from '~/lib/api';
-import { getApiErrorMessage } from '~/lib/api-error';
+import { authClient } from '~/lib/auth-client';
 
 export default function RegisterPage() {
   const navigate = useNavigate();
-  const { signIn } = useAuth();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -20,17 +17,27 @@ export default function RegisterPage() {
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     setError(null);
+
+    if (password !== passwordConfirmation) {
+      setError('Password confirmation does not match.');
+      return;
+    }
+
     setPending(true);
 
     try {
-      await apiFetch('/api/register', {
-        method: 'POST',
-        body: { name, email, password, passwordConfirmation },
+      const result = await authClient.signUp.email({
+        name: name || email,
+        email,
+        password,
       });
-      await signIn({ email, password });
-      navigate('/dashboard');
-    } catch (caught) {
-      setError(getApiErrorMessage(caught, 'Registration failed.'));
+      if (result.error) {
+        setError(result.error.message ?? 'Registration failed.');
+      } else {
+        navigate('/dashboard');
+      }
+    } catch {
+      setError('Registration failed.');
     } finally {
       setPending(false);
     }

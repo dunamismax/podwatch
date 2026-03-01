@@ -1,6 +1,15 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Links, Meta, Outlet, Scripts, ScrollRestoration } from 'react-router';
-import { AuthProvider } from '~/hooks/use-auth';
 import './app.css';
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60,
+      retry: 1,
+    },
+  },
+});
 
 export function Layout({ children }: { children: React.ReactNode }) {
   return (
@@ -22,12 +31,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
 export default function Root() {
   return (
-    <AuthProvider>
+    <QueryClientProvider client={queryClient}>
       <div className="min-h-screen">
         <div className="mx-auto min-h-screen w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
           <Outlet />
         </div>
       </div>
-    </AuthProvider>
+    </QueryClientProvider>
   );
 }

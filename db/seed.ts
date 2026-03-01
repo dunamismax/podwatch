@@ -2,7 +2,7 @@ import { hash } from 'bcryptjs';
 import { eq } from 'drizzle-orm';
 import { db, pool } from '../backend/db';
 import { ensureAccessControlBootstrap, ROLE_ADMIN } from '../backend/permissions';
-import { roles, userRoles, users } from './schema';
+import { account, roles, userRoles, users } from './schema';
 
 async function seed() {
   await ensureAccessControlBootstrap();
@@ -44,6 +44,25 @@ async function seed() {
 
   if (existingUser[0]) {
     await db.update(users).set({ passwordHash }).where(eq(users.id, userId));
+  }
+
+  // Create Better Auth credential account for the seed user
+  const existingAccount = await db
+    .select({ id: account.id })
+    .from(account)
+    .where(eq(account.userId, userId))
+    .limit(1);
+
+  if (!existingAccount[0]) {
+    await db.insert(account).values({
+      id: crypto.randomUUID(),
+      accountId: String(userId),
+      providerId: 'credential',
+      userId,
+      password: passwordHash,
+    });
+  } else {
+    await db.update(account).set({ password: passwordHash }).where(eq(account.userId, userId));
   }
 
   await db.insert(userRoles).values({ userId, roleId: adminRole.id }).onConflictDoNothing();
