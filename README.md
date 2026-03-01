@@ -1,63 +1,108 @@
 # PodDashboard
 
-PodDashboard is a Bun-first TypeScript app for pod management and upcoming event visibility.
+Pod management and event dashboard with authentication, role-based permissions, and a clean admin UI. Built on React Router 7 and a Bun-powered API backend.
 
-## Stack
+## Features
 
-- Bun runtime/package manager
-- Nuxt 4 + Vue 3 + TypeScript
-- Tailwind CSS + Nuxt UI
-- Postgres + Drizzle ORM + drizzle-kit
-- Credentials auth with Auth.js session tables, custom credentials endpoints, and Zod validation
-- Biome for lint/format
+- **Pod management** — create, view, and manage pods with event tracking
+- **Event visibility** — upcoming events dashboard with filtering
+- **Authentication** — credentials-based auth with registration, login, and sessions
+- **Role-based access** — admin and user roles with permission-gated routes
+- **Drizzle ORM** — type-safe Postgres queries with migrations and seeding
+- **Dark/light UI** — Tailwind CSS with responsive layout
 
-## Setup
+## Prerequisites
+
+- [Bun](https://bun.sh)
+- PostgreSQL
+
+## Quick Start
 
 ```bash
-cp .env.example .env
+git clone https://github.com/dunamismax/poddashboard.git
+cd poddashboard
 bun install
+cp .env.example .env
+# configure DATABASE_URL in .env
 bun run db:migrate
 bun run db:seed
-```
-
-If you are pointing at an existing local Postgres container on a non-default port, override `DATABASE_URL` accordingly before running the DB commands.
-
-## Run
-
-```bash
 bun run dev
 ```
 
-- Frontend: `http://localhost:3000`
-- API/Auth: `http://localhost:3001`
+Open [http://localhost:3000](http://localhost:3000). The API runs on port 3001 (proxied automatically in dev).
 
-Nuxt proxies `/api/*` to the Bun backend, so the browser stays same-origin for app requests.
+### Seeded User
 
-## Quality Gates
+`bun run db:seed` creates a test account:
 
-```bash
-bun run lint
-bun run typecheck
-bun run smoke
-bun run scry:doctor
-```
+- **Email**: `test@example.com`
+- **Password**: `password`
+- **Role**: `admin`
+
+## Commands
+
+| Command | Description |
+|---|---|
+| `bun run dev` | Start frontend + API dev servers |
+| `bun run dev:api` | Start only the API server (with watch) |
+| `bun run dev:web` | Start only the Vite dev server |
+| `bun run build` | Production build |
+| `bun run start` | Start production servers |
+| `bun run lint` | Biome lint check |
+| `bun run format` | Biome auto-format |
+| `bun run typecheck` | TypeScript type check |
+| `bun run smoke` | Smoke test API endpoints |
+| `bun run db:generate` | Generate Drizzle migrations |
+| `bun run db:migrate` | Run database migrations |
+| `bun run db:seed` | Seed database with test data |
+| `bun run scry:doctor` | Verify project prerequisites |
+
+## Stack
+
+- **Runtime**: Bun
+- **Frontend**: React 19 · React Router 7 (framework mode) · Tailwind CSS v4
+- **Backend**: Bun HTTP server with Zod-validated routes
+- **Database**: PostgreSQL · Drizzle ORM
+- **Auth**: Session cookies · bcrypt · Auth.js adapter
+- **Validation**: Zod
+- **Tooling**: Biome · TypeScript 5.9
 
 ## API
 
-Authenticated routes require a valid session cookie and permission grants.
+Authenticated routes require a valid session cookie.
 
-- `GET /api/pods`
-- `POST /api/pods`
-- `GET /api/events`
-- `POST /api/register`
-- `GET /api/session`
-- `POST /api/login`
-- `POST /api/logout`
+| Method | Path | Purpose |
+|---|---|---|
+| `POST` | `/api/register` | Create a new account |
+| `POST` | `/api/login` | Sign in |
+| `POST` | `/api/logout` | Sign out |
+| `GET` | `/api/session` | Get current session |
+| `GET` | `/api/pods` | List pods |
+| `POST` | `/api/pods` | Create a pod |
+| `GET` | `/api/events` | List events |
 
-## Seeded User
+## Project Structure
 
-`bun run db:seed` creates:
+```
+app/                    # React frontend
+  components/           # UI components
+  hooks/                # Custom React hooks
+  lib/                  # Utilities, API client, types
+  routes/               # Route modules
+  root.tsx              # App shell
+backend/                # API server
+  index.ts              # Server entry + routing
+  auth.ts               # Authentication logic
+  db.ts                 # Database client
+  env.ts                # Environment config (Zod)
+  session.ts            # Session management
+  permissions.ts        # RBAC logic
+db/                     # Database layer
+  migrate.ts            # Migration runner
+  seed.ts               # Database seeder
+scripts/                # CLI tools
+```
 
-- email: `test@example.com`
-- password: `password`
-- role: `admin`
+## License
+
+[MIT](LICENSE)

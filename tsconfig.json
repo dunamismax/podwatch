@@ -1,21 +1,30 @@
 {
-  "extends": "./.nuxt/tsconfig.json",
+  "include": [
+    ".react-router/types/**/*",
+    "app",
+    "backend",
+    "db",
+    "scripts",
+    "vite.config.ts",
+    "react-router.config.ts",
+    "drizzle.config.ts"
+  ],
   "compilerOptions": {
+    "lib": ["DOM", "DOM.Iterable", "ES2022"],
     "types": ["bun", "node"],
+    "target": "ES2022",
+    "module": "ES2022",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
     "strict": true,
     "noEmit": true,
     "skipLibCheck": true,
-    "allowSyntheticDefaultImports": true,
-    "resolveJsonModule": true
-  },
-  "include": [
-    ".nuxt/nuxt.d.ts",
-    "app",
-    "backend",
-    "server",
-    "db",
-    "scripts",
-    "nuxt.config.ts",
-    "drizzle.config.ts"
-  ]
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "esModuleInterop": true,
+    "rootDirs": [".", "./.react-router/types"],
+    "paths": {
+      "~/*": ["./app/*"]
+    }
+  }
 }
