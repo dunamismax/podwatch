@@ -1,5 +1,5 @@
 {
-  "name": "poddashboard",
+  "name": "podwatch",
   "private": true,
   "type": "module",
   "scripts": {

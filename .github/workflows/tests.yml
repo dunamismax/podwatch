@@ -21,13 +21,13 @@ jobs:
       postgres:
         image: postgres:16
         env:
-          POSTGRES_DB: poddashboard
+          POSTGRES_DB: podwatch
           POSTGRES_PASSWORD: postgres
           POSTGRES_USER: postgres
         ports:
           - 5432:5432
         options: >-
-          --health-cmd="pg_isready -U postgres -d poddashboard"
+          --health-cmd="pg_isready -U postgres -d podwatch"
           --health-interval=10s
           --health-timeout=5s
           --health-retries=5
@@ -47,28 +47,28 @@ jobs:
       - name: Run Doctor
         env:
           AUTH_SECRET: ci-secret-2026
-          DATABASE_URL: postgres://postgres:postgres@localhost:5432/poddashboard
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/podwatch
         run: bun run scry:doctor
 
       - name: Run Migrations
         env:
           AUTH_SECRET: ci-secret-2026
-          DATABASE_URL: postgres://postgres:postgres@localhost:5432/poddashboard
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/podwatch
         run: bun run db:migrate
 
       - name: Seed Database
         env:
           AUTH_SECRET: ci-secret-2026
-          DATABASE_URL: postgres://postgres:postgres@localhost:5432/poddashboard
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/podwatch
         run: bun run db:seed
 
       - name: Start App
         env:
           AUTH_SECRET: ci-secret-2026
-          DATABASE_URL: postgres://postgres:postgres@localhost:5432/poddashboard
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/podwatch
         run: |
-          bun run dev > /tmp/poddashboard-dev.log 2>&1 &
-          echo $! > /tmp/poddashboard-dev.pid
+          bun run dev > /tmp/podwatch-dev.log 2>&1 &
+          echo $! > /tmp/podwatch-dev.pid
 
       - name: Wait For App
         run: |
@@ -78,7 +78,7 @@ jobs:
             fi
             sleep 2
           done
-          cat /tmp/poddashboard-dev.log
+          cat /tmp/podwatch-dev.log
           exit 1
 
       - name: Run Smoke Check
@@ -89,10 +89,10 @@ jobs:
       - name: Stop App
         if: always()
         run: |
-          if [ -f /tmp/poddashboard-dev.pid ]; then
-            kill "$(cat /tmp/poddashboard-dev.pid)" || true
+          if [ -f /tmp/podwatch-dev.pid ]; then
+            kill "$(cat /tmp/podwatch-dev.pid)" || true
           fi
 
       - name: Show App Log
         if: failure()
-        run: cat /tmp/poddashboard-dev.log
+        run: cat /tmp/podwatch-dev.log
