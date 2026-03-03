@@ -1,4 +1,4 @@
-# PodDashboard
+# PodWatch
 
 Pod management and event dashboard with authentication, role-based permissions, and a clean admin UI. Built on React Router 7 and a Bun-powered API backend.
 
@@ -19,8 +19,8 @@ Pod management and event dashboard with authentication, role-based permissions, 
 ## Quick Start
 
 ```bash
-git clone https://github.com/dunamismax/poddashboard.git
-cd poddashboard
+git clone https://github.com/dunamismax/podwatch.git
+cd podwatch
 bun install
 cp .env.example .env
 # configure DATABASE_URL in .env

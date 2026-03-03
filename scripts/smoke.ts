@@ -104,10 +104,7 @@ async function main() {
   response = await request(jar, appUrl, '/dashboard');
   const dashboardHtml = await response.text();
   assert(response.status === 200, 'Authenticated dashboard request should return 200.');
-  assert(
-    dashboardHtml.includes('PodDashboard'),
-    'Dashboard response did not render the app shell.',
-  );
+  assert(dashboardHtml.includes('PodWatch'), 'Dashboard response did not render the app shell.');
 
   // Check business API endpoints work with session
   response = await request(jar, apiUrl, '/api/pods');

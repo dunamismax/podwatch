@@ -6,7 +6,7 @@ const env = z
     DATABASE_URL: z
       .string()
       .min(1, 'DATABASE_URL is required')
-      .default('postgres://postgres:postgres@localhost:5432/poddashboard'),
+      .default('postgres://postgres:postgres@localhost:5432/podwatch'),
   })
   .parse(process.env);
 
