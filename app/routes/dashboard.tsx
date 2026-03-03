@@ -1,4 +1,5 @@
-import { type FormEvent, useCallback, useEffect, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { type FormEvent, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { Badge } from '~/components/ui/badge';
 import { Button } from '~/components/ui/button';
@@ -8,79 +9,41 @@ import { Textarea } from '~/components/ui/textarea';
 import { useAuth } from '~/hooks/use-auth';
 import { apiFetch } from '~/lib/api';
 import { getApiErrorMessage } from '~/lib/api-error';
-
-type Pod = {
-  description: string | null;
-  id: number;
-  name: string;
-  role: 'member' | 'owner';
-};
-
-type EventRecord = {
-  id: number;
-  location: string | null;
-  podName: string | null;
-  scheduledFor: string | null;
-  title: string;
-};
-
-type DashboardData = {
-  events: EventRecord[];
-  pods: Pod[];
-};
+import type { EventRecord, Pod } from '~/lib/types';
 
 export default function DashboardPage() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { session, signOut } = useAuth();
-
-  const [data, setData] = useState<DashboardData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [fetchError, setFetchError] = useState<string | null>(null);
 
   const [podName, setPodName] = useState('');
   const [podDescription, setPodDescription] = useState('');
-  const [actionError, setActionError] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
 
   const canCreatePod = podName.trim().length >= 2;
 
-  const fetchData = useCallback(async () => {
-    try {
-      const [podsRes, eventsRes] = await Promise.all([
-        apiFetch<{ pods: Pod[] }>('/api/pods'),
-        apiFetch<{ events: EventRecord[] }>('/api/events'),
-      ]);
-      setData({ pods: podsRes.pods, events: eventsRes.events });
-      setFetchError(null);
-    } catch (err) {
-      setFetchError(getApiErrorMessage(err, 'Failed to load dashboard.'));
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const podsQuery = useQuery({
+    queryKey: ['pods'],
+    queryFn: () => apiFetch<{ pods: Pod[] }>('/api/pods'),
+  });
 
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+  const eventsQuery = useQuery({
+    queryKey: ['events'],
+    queryFn: () => apiFetch<{ events: EventRecord[] }>('/api/events'),
+  });
+
+  const createPod = useMutation({
+    mutationFn: (body: { name: string; description: string }) =>
+      apiFetch<{ pod: Pod }>('/api/pods', { method: 'POST', body }),
+    onSuccess: () => {
+      setPodName('');
+      setPodDescription('');
+      queryClient.invalidateQueries({ queryKey: ['pods'] });
+    },
+  });
 
   async function handleCreatePod(event: FormEvent) {
     event.preventDefault();
-    setActionError(null);
-    setSaving(true);
-
-    try {
-      await apiFetch('/api/pods', {
-        method: 'POST',
-        body: { name: podName, description: podDescription },
-      });
-      setPodName('');
-      setPodDescription('');
-      await fetchData();
-    } catch (caught) {
-      setActionError(getApiErrorMessage(caught, 'Failed to create pod.'));
-    } finally {
-      setSaving(false);
-    }
+    createPod.mutate({ name: podName, description: podDescription });
   }
 
   async function handleSignOut() {
@@ -88,7 +51,16 @@ export default function DashboardPage() {
     navigate('/login');
   }
 
-  const displayError = actionError ?? fetchError;
+  const loading = podsQuery.isLoading || eventsQuery.isLoading;
+  const pods = podsQuery.data?.pods ?? [];
+  const events = eventsQuery.data?.events ?? [];
+  const displayError = createPod.error
+    ? getApiErrorMessage(createPod.error, 'Failed to create pod.')
+    : podsQuery.error
+      ? getApiErrorMessage(podsQuery.error, 'Failed to load pods.')
+      : eventsQuery.error
+        ? getApiErrorMessage(eventsQuery.error, 'Failed to load events.')
+        : null;
 
   return (
     <main className="space-y-6 py-4">
@@ -113,7 +85,9 @@ export default function DashboardPage() {
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <div className="rounded-2xl border border-white/10 bg-slate-950/30 px-4 py-3">
               <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Signed in as</p>
-              <p className="mt-1 text-sm font-medium text-slate-100">{session?.email}</p>
+              <p className="mt-1 text-sm font-medium text-slate-100">
+                {session?.email ?? 'Unknown'}
+              </p>
             </div>
             <Button
               className="justify-center"
@@ -129,7 +103,10 @@ export default function DashboardPage() {
       </header>
 
       {displayError && (
-        <p className="rounded-2xl border border-rose-400/35 bg-rose-950/40 px-4 py-3 text-sm text-rose-200">
+        <p
+          role="alert"
+          className="rounded-2xl border border-rose-400/35 bg-rose-950/40 px-4 py-3 text-sm text-rose-200"
+        >
           {displayError}
         </p>
       )}
@@ -180,7 +157,7 @@ export default function DashboardPage() {
                 className="w-full justify-center"
                 size="xl"
                 disabled={!canCreatePod}
-                loading={saving}
+                loading={createPod.isPending}
                 type="submit"
               >
                 Create pod
@@ -200,20 +177,22 @@ export default function DashboardPage() {
                   <h2 className="mt-2 text-2xl font-semibold text-white">Your pods</h2>
                 </div>
                 <Badge color="neutral" variant="outline" className="rounded-full px-3 py-1">
-                  {data?.pods.length ?? 0} total
+                  {pods.length} total
                 </Badge>
               </div>
 
               {loading ? (
-                <div className="text-sm text-slate-300">Loading pods...</div>
-              ) : !data?.pods.length ? (
+                <div className="text-sm text-slate-300" aria-live="polite">
+                  Loading pods...
+                </div>
+              ) : !pods.length ? (
                 <div className="rounded-2xl border border-dashed border-white/10 px-4 py-5 text-sm text-slate-300">
                   No pods yet. Create the first one and the dashboard stops feeling like an
                   abandoned bridge.
                 </div>
               ) : (
                 <ul className="grid gap-3">
-                  {data.pods.map((pod) => (
+                  {pods.map((pod) => (
                     <li
                       key={pod.id}
                       className="rounded-3xl border border-white/10 bg-slate-950/30 p-4"
@@ -252,14 +231,16 @@ export default function DashboardPage() {
               </div>
 
               {loading ? (
-                <div className="text-sm text-slate-300">Loading events...</div>
-              ) : !data?.events.length ? (
+                <div className="text-sm text-slate-300" aria-live="polite">
+                  Loading events...
+                </div>
+              ) : !events.length ? (
                 <div className="rounded-2xl border border-dashed border-white/10 px-4 py-5 text-sm text-slate-300">
                   No upcoming events. Quiet is fine, but now you know it is quiet on purpose.
                 </div>
               ) : (
                 <ul className="grid gap-3 lg:grid-cols-2">
-                  {data.events.map((event) => (
+                  {events.map((event) => (
                     <li
                       key={event.id}
                       className="rounded-3xl border border-white/10 bg-slate-950/30 p-4"

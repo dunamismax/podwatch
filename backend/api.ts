@@ -46,6 +46,10 @@ export async function handlePodsIndex(request: Request): Promise<Response> {
     return access.error;
   }
 
+  const url = new URL(request.url);
+  const limit = Math.min(Math.max(Number(url.searchParams.get('limit')) || 50, 1), 100);
+  const offset = Math.max(Number(url.searchParams.get('offset')) || 0, 0);
+
   const records = await db
     .select({
       id: pods.id,
@@ -56,7 +60,9 @@ export async function handlePodsIndex(request: Request): Promise<Response> {
     .from(podMembers)
     .innerJoin(pods, eq(pods.id, podMembers.podId))
     .where(eq(podMembers.userId, access.user.id))
-    .orderBy(desc(pods.createdAt));
+    .orderBy(desc(pods.createdAt))
+    .limit(limit)
+    .offset(offset);
 
   return json({ pods: records });
 }

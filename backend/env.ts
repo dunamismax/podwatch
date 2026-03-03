@@ -10,3 +10,7 @@ export const env = z
     PORT: z.coerce.number().int().positive().default(3001),
   })
   .parse(process.env);
+
+if (env.NODE_ENV === 'production' && env.AUTH_SECRET === 'dev-secret-change-me') {
+  throw new Error('AUTH_SECRET must be changed from the default value in production.');
+}

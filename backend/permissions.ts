@@ -19,51 +19,45 @@ export const ADMIN_PERMISSIONS = [
 ];
 
 export async function userHasPermission(userId: number, permissionName: string): Promise<boolean> {
-  const permission = await db
-    .select({ id: permissions.id })
-    .from(permissions)
-    .where(eq(permissions.name, permissionName))
-    .limit(1);
-
-  if (!permission[0]) {
-    return false;
-  }
-
-  const membership = await db
-    .select({ roleId: userRoles.roleId })
+  const result = await db
+    .select({ permissionId: rolePermissions.permissionId })
     .from(userRoles)
-    .innerJoin(
-      rolePermissions,
+    .innerJoin(rolePermissions, eq(rolePermissions.roleId, userRoles.roleId))
+    .innerJoin(permissions, eq(permissions.id, rolePermissions.permissionId))
+    .where(
       and(
-        eq(rolePermissions.roleId, userRoles.roleId),
-        eq(rolePermissions.permissionId, permission[0].id),
+        eq(userRoles.userId, userId),
+        eq(userRoles.active, true),
+        eq(permissions.name, permissionName),
       ),
     )
-    .where(and(eq(userRoles.userId, userId), eq(userRoles.active, true)))
     .limit(1);
 
-  return membership.length > 0;
+  return result.length > 0;
 }
 
 export async function ensureAccessControlBootstrap(): Promise<void> {
-  for (const permissionName of ADMIN_PERMISSIONS) {
-    await db
-      .insert(permissions)
-      .values({ name: permissionName })
-      .onConflictDoUpdate({ target: permissions.name, set: { name: permissionName } });
-  }
+  await Promise.all(
+    ADMIN_PERMISSIONS.map((name) =>
+      db
+        .insert(permissions)
+        .values({ name })
+        .onConflictDoUpdate({ target: permissions.name, set: { name } }),
+    ),
+  );
 
-  const [memberRole] = await db
-    .insert(roles)
-    .values({ name: ROLE_MEMBER })
-    .onConflictDoUpdate({ target: roles.name, set: { name: ROLE_MEMBER } })
-    .returning({ id: roles.id });
-
-  const [adminRole] = await db
-    .insert(roles)
-    .values({ name: ROLE_ADMIN })
-    .onConflictDoUpdate({ target: roles.name, set: { name: ROLE_ADMIN } })
-    .returning({ id: roles.id });
+  const [[memberRole], [adminRole]] = await Promise.all([
+    db
+      .insert(roles)
+      .values({ name: ROLE_MEMBER })
+      .onConflictDoUpdate({ target: roles.name, set: { name: ROLE_MEMBER } })
+      .returning({ id: roles.id }),
+    db
+      .insert(roles)
+      .values({ name: ROLE_ADMIN })
+      .onConflictDoUpdate({ target: roles.name, set: { name: ROLE_ADMIN } })
+      .returning({ id: roles.id }),
+  ]);
 
   if (!memberRole || !adminRole) {
     throw new Error('Access control bootstrap failed.');
@@ -71,21 +65,22 @@ export async function ensureAccessControlBootstrap(): Promise<void> {
 
   const allPermissions = await db.select().from(permissions);
   const memberPermissionIds = allPermissions
-    .filter((permission) => MEMBER_PERMISSIONS.includes(permission.name))
-    .map((permission) => permission.id);
-  const adminPermissionIds = allPermissions.map((permission) => permission.id);
+    .filter((p) => MEMBER_PERMISSIONS.includes(p.name))
+    .map((p) => p.id);
+  const adminPermissionIds = allPermissions.map((p) => p.id);
 
-  for (const permissionId of memberPermissionIds) {
-    await db
-      .insert(rolePermissions)
-      .values({ roleId: memberRole.id, permissionId })
-      .onConflictDoNothing();
-  }
-
-  for (const permissionId of adminPermissionIds) {
-    await db
-      .insert(rolePermissions)
-      .values({ roleId: adminRole.id, permissionId })
-      .onConflictDoNothing();
-  }
+  await Promise.all([
+    ...memberPermissionIds.map((permissionId) =>
+      db
+        .insert(rolePermissions)
+        .values({ roleId: memberRole.id, permissionId })
+        .onConflictDoNothing(),
+    ),
+    ...adminPermissionIds.map((permissionId) =>
+      db
+        .insert(rolePermissions)
+        .values({ roleId: adminRole.id, permissionId })
+        .onConflictDoNothing(),
+    ),
+  ]);
 }

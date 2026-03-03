@@ -1,10 +1,5 @@
 import { authClient } from '~/lib/auth-client';
-
-export type SessionUser = {
-  email: string;
-  id: string;
-  name: string | null;
-};
+import type { SessionUser } from '~/lib/types';
 
 export function useAuth() {
   const session = authClient.useSession();

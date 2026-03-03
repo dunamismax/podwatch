@@ -110,7 +110,10 @@ export default function RegisterPage() {
             </div>
 
             {error && (
-              <p className="rounded-2xl border border-rose-400/35 bg-rose-950/40 px-3 py-2 text-sm text-rose-200 sm:col-span-2">
+              <p
+                role="alert"
+                className="rounded-2xl border border-rose-400/35 bg-rose-950/40 px-3 py-2 text-sm text-rose-200 sm:col-span-2"
+              >
                 {error}
               </p>
             )}

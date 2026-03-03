@@ -9,7 +9,7 @@ Pod management and event dashboard with authentication, role-based permissions, 
 - **Authentication** — credentials-based auth with registration, login, and sessions
 - **Role-based access** — admin and user roles with permission-gated routes
 - **Drizzle ORM** — type-safe Postgres queries with migrations and seeding
-- **Dark/light UI** — Tailwind CSS with responsive layout
+- **Dark UI** — Tailwind CSS with responsive layout
 
 ## Prerequisites
 
@@ -63,7 +63,7 @@ Open [http://localhost:3000](http://localhost:3000). The API runs on port 3001 (
 - **Frontend**: React 19 · React Router 7 (framework mode) · Tailwind CSS v4
 - **Backend**: Bun HTTP server with Zod-validated routes
 - **Database**: PostgreSQL · Drizzle ORM
-- **Auth**: Session cookies · bcrypt · Auth.js adapter
+- **Auth**: Session cookies · bcrypt · Better Auth
 - **Validation**: Zod
 - **Tooling**: Biome · TypeScript 5.9
 
@@ -73,13 +73,14 @@ Authenticated routes require a valid session cookie.
 
 | Method | Path | Purpose |
 |---|---|---|
-| `POST` | `/api/register` | Create a new account |
-| `POST` | `/api/login` | Sign in |
-| `POST` | `/api/logout` | Sign out |
-| `GET` | `/api/session` | Get current session |
-| `GET` | `/api/pods` | List pods |
+| `POST` | `/api/auth/sign-up/email` | Create a new account |
+| `POST` | `/api/auth/sign-in/email` | Sign in |
+| `POST` | `/api/auth/sign-out` | Sign out |
+| `GET` | `/api/auth/get-session` | Get current session |
+| `GET` | `/api/pods` | List pods (paginated: `?limit=50&offset=0`) |
 | `POST` | `/api/pods` | Create a pod |
 | `GET` | `/api/events` | List events |
+| `GET` | `/health` | Health check |
 
 ## Project Structure
 

@@ -68,14 +68,17 @@ export default function LoginPage() {
               <Input
                 id="password"
                 type="password"
-                placeholder="password"
+                placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
             </div>
 
             {error && (
-              <p className="rounded-2xl border border-rose-400/35 bg-rose-950/40 px-3 py-2 text-sm text-rose-200">
+              <p
+                role="alert"
+                className="rounded-2xl border border-rose-400/35 bg-rose-950/40 px-3 py-2 text-sm text-rose-200"
+              >
                 {error}
               </p>
             )}
@@ -85,11 +88,13 @@ export default function LoginPage() {
             </Button>
           </form>
 
-          <div className="rounded-2xl border border-white/10 bg-slate-950/30 px-4 py-3 text-sm text-slate-300">
-            Seeded admin for local validation:{' '}
-            <span className="font-medium text-white">test@example.com</span> /{' '}
-            <span className="font-medium text-white">password</span>
-          </div>
+          {import.meta.env.DEV && (
+            <div className="rounded-2xl border border-white/10 bg-slate-950/30 px-4 py-3 text-sm text-slate-300">
+              Seeded admin for local validation:{' '}
+              <span className="font-medium text-white">test@example.com</span> /{' '}
+              <span className="font-medium text-white">password</span>
+            </div>
+          )}
 
           <p className="text-sm text-slate-300">
             Need an account?{' '}
