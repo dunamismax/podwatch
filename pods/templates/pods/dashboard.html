@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+
+{% block title %}PodWatch{% endblock %}
+
+{% block content %}
+  <section class="hero">
+    <p class="eyebrow">Literal Django Rewrite</p>
+    <h1>PodWatch</h1>
+    <p class="lede">
+      PodWatch is a small board for named groups and the events they plan together.
+      A pod is just a recurring group. No auth shell, no generic admin platform, no speculative product layers.
+    </p>
+
+    <div class="summary">
+      <div class="summary-card">
+        <strong>{{ summary.pod_count }}</strong>
+        <span>pods tracked</span>
+      </div>
+      <div class="summary-card">
+        <strong>{{ summary.event_count }}</strong>
+        <span>events scheduled</span>
+      </div>
+      <div class="summary-card">
+        <strong>{{ summary.upcoming_count }}</strong>
+        <span>upcoming events</span>
+      </div>
+    </div>
+
+    {% if messages %}
+      <ul class="flash-list">
+        {% for message in messages %}
+          <li class="flash {{ message.tags|default:'success' }}">{{ message }}</li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+  </section>
+
+  <section class="layout">
+    <div class="stack">
+      <article class="panel">
+        <p class="eyebrow">Pods</p>
+        <h2>Create a pod</h2>
+        <p class="section-copy">
+          Keep the unit simple: name it, describe it, and it becomes available for event scheduling.
+        </p>
+
+        <form action="{% url 'pods:create_pod' %}" method="post">
+          {% csrf_token %}
+          {% if pod_form.non_field_errors %}
+            <ul class="error-list">
+              {% for error in pod_form.non_field_errors %}
+                <li>{{ error }}</li>
+              {% endfor %}
+            </ul>
+          {% endif %}
+
+          {% for field in pod_form %}
+            <div class="field">
+              <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+              {{ field }}
+              {% if field.help_text %}
+                <p class="help-text">{{ field.help_text }}</p>
+              {% endif %}
+              {% if field.errors %}
+                <ul class="error-list">
+                  {% for error in field.errors %}
+                    <li>{{ error }}</li>
+                  {% endfor %}
+                </ul>
+              {% endif %}
+            </div>
+          {% endfor %}
+
+          <button type="submit">Create pod</button>
+        </form>
+      </article>
+
+      <article class="panel">
+        <p class="eyebrow">Schedule</p>
+        <h2>Schedule an event</h2>
+        <p class="section-copy">
+          Add a concrete meeting to a pod. If there are no pods yet, create one first.
+        </p>
+
+        <form action="{% url 'pods:create_event' %}" method="post">
+          {% csrf_token %}
+          {% if event_form.non_field_errors %}
+            <ul class="error-list">
+              {% for error in event_form.non_field_errors %}
+                <li>{{ error }}</li>
+              {% endfor %}
+            </ul>
+          {% endif %}
+
+          {% for field in event_form %}
+            <div class="field">
+              <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+              {{ field }}
+              {% if field.help_text %}
+                <p class="help-text">{{ field.help_text }}</p>
+              {% endif %}
+              {% if field.errors %}
+                <ul class="error-list">
+                  {% for error in field.errors %}
+                    <li>{{ error }}</li>
+                  {% endfor %}
+                </ul>
+              {% endif %}
+            </div>
+          {% endfor %}
+
+          <button type="submit">Schedule event</button>
+        </form>
+      </article>
+    </div>
+
+    <div class="stack">
+      <article class="panel">
+        <p class="eyebrow">Current Pods</p>
+        <h2>Pods</h2>
+        <p class="section-copy">
+          Each pod is listed with its description and current event count.
+        </p>
+
+        {% if pods %}
+          <ul class="list">
+            {% for pod in pods %}
+              <li class="item">
+                <div class="item-header">
+                  <h3>{{ pod.name }}</h3>
+                  <span class="chip">{{ pod.event_count }} event{{ pod.event_count|pluralize }}</span>
+                </div>
+                {% if pod.description %}
+                  <p class="meta">{{ pod.description }}</p>
+                {% endif %}
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p class="empty">No pods yet. Start by creating the first recurring group.</p>
+        {% endif %}
+      </article>
+
+      <article class="panel">
+        <p class="eyebrow">Timeline</p>
+        <h2>Recent and upcoming events</h2>
+        <p class="section-copy">
+          Events from the last day remain visible so the board still makes sense just after a meeting.
+        </p>
+
+        {% if events %}
+          <ul class="list">
+            {% for event in events %}
+              <li class="item">
+                <div class="item-header">
+                  <h3>{{ event.title }}</h3>
+                  <span class="chip">{{ event.pod.name }}</span>
+                </div>
+                <p class="meta">{{ event.scheduled_for|date:"M j, Y g:i A" }}</p>
+                {% if event.location %}
+                  <p class="meta">Location: {{ event.location }}</p>
+                {% endif %}
+                {% if event.description %}
+                  <p class="meta">{{ event.description }}</p>
+                {% endif %}
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p class="empty">No events yet. Schedule one once a pod exists.</p>
+        {% endif %}
+      </article>
+    </div>
+  </section>
+{% endblock %}

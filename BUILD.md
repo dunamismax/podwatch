@@ -1,136 +1,90 @@
 # podwatch — Build Tracker
 
-**Status:** Phase 1 — Feature Expansion
-**Last Updated:** 2026-03-04
+**Status:** Baseline Reset
+**Last Updated:** 2026-03-07
 **Branch:** `main`
 
----
+## Literal Product Definition
 
-## What This Repo Is
+PodWatch is a small scheduling app for pods and their events.
 
-Self-hostable podcast dashboard. Track subscriptions, manage listening queues, get episode summaries. Full-stack web app with auth, podcast feed ingestion, and a clean listening-focused UI.
+A pod is a named group that meets repeatedly. Examples: a game table, a study group, a volunteer team, a neighborhood crew. The app is intentionally limited to:
+
+- creating pods
+- listing pods
+- scheduling events for those pods
+- viewing recent and upcoming events
+
+Anything beyond that is out of scope unless it is directly required by those workflows.
 
 ## Architecture Snapshot
 
-```
+```text
 podwatch/
-├── app/                        # React Router v7 (framework mode)
-│   ├── routes/
-│   │   ├── home.tsx            # Landing page
-│   │   ├── dashboard.tsx       # Main authenticated view
-│   │   ├── login.tsx           # Login form
-│   │   ├── register.tsx        # Registration form
-│   │   ├── auth-layout.tsx     # Authenticated route wrapper
-│   │   └── guest-layout.tsx    # Public route wrapper
-│   ├── components/
-│   │   ├── ui/                 # shadcn/ui primitives (card, badge, button, input, textarea)
-│   │   ├── confirm-dialog.tsx
-│   │   ├── error-boundary.tsx
-│   │   ├── loading-screen.tsx
-│   │   └── toast.tsx
-│   ├── hooks/use-auth.tsx      # Auth context hook
-│   └── lib/
-│       ├── api.ts              # API client
-│       ├── auth-client.ts      # Better Auth client
-│       ├── types.ts            # Shared types
-│       └── utils.ts            # Utilities (cn, etc.)
-├── backend/
-│   ├── index.ts                # Hono server entry
-│   ├── api.ts                  # API routes
-│   ├── auth.ts                 # Better Auth config
-│   ├── db.ts                   # Drizzle database connection
-│   ├── env.ts                  # Zod-validated env vars
-│   ├── session.ts              # Session management
-│   ├── permissions.ts          # Authorization logic
-│   ├── rate-limit.ts           # Rate limiting
-│   ├── csrf.ts                 # CSRF protection
-│   └── http.ts                 # HTTP utilities
-├── db/
-│   ├── migrate.ts              # Migration runner
-│   ├── seed.ts                 # Seed data
-│   └── schema/                 # Drizzle schema definitions
-├── scripts/
-│   ├── cli.ts                  # Dev CLI (doctor, etc.)
-│   └── smoke.ts                # Smoke test runner
-├── drizzle.config.ts           # Drizzle Kit config
-└── storage/                    # Local file storage
+├── manage.py
+├── podwatch/
+│   ├── settings.py
+│   ├── urls.py
+│   ├── asgi.py
+│   └── wsgi.py
+├── pods/
+│   ├── forms.py
+│   ├── models.py
+│   ├── tests.py
+│   ├── urls.py
+│   ├── views.py
+│   ├── migrations/
+│   ├── static/pods/site.css
+│   └── templates/
+└── requirements.txt
 ```
 
-**Stack:** React Router v7 + Vite, TypeScript, Tailwind v4, shadcn/ui, Hono backend, Better Auth, Drizzle ORM + Postgres, TanStack Query, Zod, Biome.
+**Stack:** Python, Django, SQLite, server-rendered HTML, plain CSS.
 
----
+## What Was Removed On Purpose
 
-## Phase Plan
+- React Router app shell
+- Bun API server
+- Better Auth integration
+- role and permission scaffolding
+- Drizzle/Postgres migration layer
+- TypeScript build, lint, and smoke tooling
 
-### Phase 0 — Foundation (Complete)
+Those pieces were not carried forward because they were broader than the product that was actually present in the repo.
 
-- [x] Project scaffold (Bun, React Router v7, Tailwind v4, Biome)
-- [x] Auth system (Better Auth, login/register/sessions)
-- [x] Database schema + Drizzle migrations
-- [x] Backend API (Hono, rate limiting, CSRF, session management)
-- [x] Dashboard route with authenticated layout
-- [x] Dev tooling (smoke tests, doctor CLI, concurrent dev servers)
+## Current Foundation
 
-### Phase 1 — Feature Expansion (Current)
+### Complete
 
-**Goal:** Turn the authenticated shell into a useful podcast dashboard with real feed data.
+- [x] Django project bootstrap
+- [x] Pod and event models
+- [x] Standard Django forms for creating pods and events
+- [x] Single dashboard page rendered on the server
+- [x] Plain CSS styling
+- [x] Django tests for the main flows
 
-**Success criteria:** Add a podcast by RSS URL → episodes appear → mark as listened → queue management works.
+### Intentionally Deferred
 
-- [ ] Podcast subscription: add/remove podcasts by RSS feed URL
-- [ ] RSS feed parser: fetch and parse podcast RSS/Atom feeds, extract episodes
-- [ ] Episode list: display episodes with title, date, duration, description
-- [ ] Playback state: mark episodes as listened/unlistened, track progress
-- [ ] Listening queue: add episodes to queue, reorder, auto-advance
-- [ ] Search/filter: search subscriptions and episodes by title/description
-- [ ] Feed refresh: manual + scheduled background refresh of subscribed feeds
-- [ ] Podcast detail page: show info, episode list, subscription controls
-- [ ] DB schema additions: podcasts, episodes, subscriptions, playback_state tables
+- [ ] authentication
+- [ ] pod membership
+- [ ] permissions
+- [ ] API endpoints
+- [ ] background jobs
+- [ ] import/export
 
-### Phase 2 — Listening Experience
+## Verification Target
 
-- [ ] Embedded audio player (persistent across navigation)
-- [ ] Playback speed controls (0.5x – 3x)
-- [ ] Skip forward/back (configurable intervals)
-- [ ] Resume from last position
-- [ ] Episode notes / bookmarks at timestamps
-- [ ] OPML import/export for podcast subscriptions
+When dependencies are installed, the expected baseline checks are:
 
-### Phase 3 — Intelligence
-
-- [ ] Episode summaries (LLM-generated from transcripts or show notes)
-- [ ] Topic tagging / categorization
-- [ ] Recommendation engine (based on listening history)
-- [ ] "What did I miss" digest for podcasts with many unlistened episodes
-
-### Phase 4 — Production
-
-- [ ] Docker Compose for self-hosting
-- [ ] Background job system for feed refreshes
-- [ ] Notification on new episodes from subscribed podcasts
-- [ ] Mobile-responsive polish
-- [ ] Performance: pagination, lazy loading, optimistic updates
-
----
-
-## Verification Snapshot
-
-```
-bun run lint      ✅  (49 files, no issues)
-bun run typecheck ✅
-bun run smoke     — (smoke test runner exists)
+```bash
+python manage.py check
+python manage.py test
+python -m compileall manage.py podwatch pods
 ```
 
-Last verified: 2026-03-04
+## Working Rules For Future Changes
 
----
-
-## Agent Instructions
-
-- **Dual server architecture:** `dev:api` (Hono backend) + `dev:web` (React Router dev server) run concurrently.
-- Auth is Better Auth — not Auth.js. Check `backend/auth.ts` for config.
-- Drizzle schema lives in `db/schema/`. Run `bun run db:generate` after schema changes, then `bun run db:migrate`.
-- Use TanStack Query for all server-state fetching in the frontend.
-- shadcn/ui components in `app/components/ui/` — add new ones via the shadcn CLI pattern.
-- RSS parsing: use a well-maintained library (e.g., `rss-parser` or `fast-xml-parser`) — don't hand-roll XML parsing.
-- Update this BUILD.md in the same commit as meaningful changes.
+- Keep the product literal: pods and events first.
+- Prefer server-rendered views over front-end framework reintroduction.
+- Add new concepts only when they are required by real pod scheduling workflows.
+- Update this file when the product boundary changes, not when tooling fashion changes.
