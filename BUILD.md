@@ -1,21 +1,67 @@
 # podwatch — Build Tracker
 
-**Status:** Baseline Reset
-**Last Updated:** 2026-03-07
-**Branch:** `main`
+**Status:** Doc Cleanup Complete (Verification Limited By Environment)
+**Last Updated:** 2026-03-08
+**Branch:** `codex/stack-realign-20260308-105446`
 
-## Literal Product Definition
+## Current Repo Reality
 
-PodWatch is a small scheduling app for pods and their events.
+PodWatch is already a small Django application for tracking pods and their scheduled events.
 
-A pod is a named group that meets repeatedly. Examples: a game table, a study group, a volunteer team, a neighborhood crew. The app is intentionally limited to:
+The implementation present in this worktree is:
+
+- Python 3
+- Django
+- SQLite for local development
+- server-rendered HTML templates
+- plain CSS
+
+The app currently supports:
 
 - creating pods
-- listing pods
-- scheduling events for those pods
-- viewing recent and upcoming events
+- listing pods with event counts
+- scheduling events for pods
+- viewing recent and upcoming events on one dashboard
 
-Anything beyond that is out of scope unless it is directly required by those workflows.
+## Migration Objective For This Pass
+
+This pass is not a framework rewrite. The Django app already exists and is the retained implementation.
+
+The objective is to remove stale documentation and helper guidance that still describes the deleted Bun/React/TypeScript/PostgreSQL-era codebase as if it were current.
+
+## Scope Of Work
+
+### Keep
+
+- the current Django project layout
+- existing models, forms, views, templates, CSS, and tests
+- Python-only CI that matches the actual repo
+
+### Clean Up
+
+- top-level docs that still frame the repo around the removed stack
+- helper instructions that still require Bun or TypeScript workflows
+- review notes that only describe the deleted implementation
+- stray wording that treats removed stack components as active project guidance
+
+### Avoid
+
+- rewriting the working Django app unless a doc fix depends on it
+- adding a new frontend or API stack
+- touching files outside this repo worktree
+
+## Concrete Targets
+
+- `README.md`
+  - describe only the current Django app
+  - remove old-stack migration narration unless a short historical note is needed
+- `CLAUDE.md`
+  - replace Bun/TypeScript commit instructions with Python/Django repo rules
+- `CODE-REVIEW.md`
+  - remove the stale review of the deleted React/Bun/Postgres system
+  - replace it with a short note or a current-scope review document
+- repo-local CI docs and helper text
+  - keep only truthful Python/Django checks
 
 ## Architecture Snapshot
 
@@ -39,52 +85,25 @@ podwatch/
 └── requirements.txt
 ```
 
-**Stack:** Python, Django, SQLite, server-rendered HTML, plain CSS.
-
-## What Was Removed On Purpose
-
-- React Router app shell
-- Bun API server
-- Better Auth integration
-- role and permission scaffolding
-- Drizzle/Postgres migration layer
-- TypeScript build, lint, and smoke tooling
-
-Those pieces were not carried forward because they were broader than the product that was actually present in the repo.
-
-## Current Foundation
-
-### Complete
-
-- [x] Django project bootstrap
-- [x] Pod and event models
-- [x] Standard Django forms for creating pods and events
-- [x] Single dashboard page rendered on the server
-- [x] Plain CSS styling
-- [x] Django tests for the main flows
-
-### Intentionally Deferred
-
-- [ ] authentication
-- [ ] pod membership
-- [ ] permissions
-- [ ] API endpoints
-- [ ] background jobs
-- [ ] import/export
-
 ## Verification Target
 
-When dependencies are installed, the expected baseline checks are:
+Run the smallest truthful checks that match the current repository:
 
 ```bash
-python manage.py check
-python manage.py test
-python -m compileall manage.py podwatch pods
+python3 manage.py check
+python3 manage.py test
+python3 -m compileall manage.py podwatch pods
 ```
 
-## Working Rules For Future Changes
+## Exit Criteria
 
-- Keep the product literal: pods and events first.
-- Prefer server-rendered views over front-end framework reintroduction.
-- Add new concepts only when they are required by real pod scheduling workflows.
-- Update this file when the product boundary changes, not when tooling fashion changes.
+- top-level repo documentation describes only the Django implementation
+- no repo-local instructions require Bun, TypeScript, or the removed app/server/database stack
+- verification commands above pass in this worktree environment
+- a local commit is created if the repo reaches a coherent verified checkpoint
+
+## Verification Notes
+
+- `python3 -m compileall manage.py podwatch pods` passed on 2026-03-08.
+- `python3 manage.py check` and `python3 manage.py test` could not run because Django is not installed in the current shell.
+- A temporary venv install attempt was also blocked on 2026-03-08 because outbound package download was unavailable in this environment.

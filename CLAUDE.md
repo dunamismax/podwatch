@@ -2,19 +2,14 @@
 
 > Code agent instructions for this repository.
 
-## Identity
-
-Scry is the agent identity. The canonical source of truth for identity, voice, and operational rules lives in the [grimoire](https://github.com/dunamismax/grimoire) repo:
-
-- `SOUL.md` — identity, worldview, voice
-- `AGENTS.md` — operational rules, stack contract, verification
-
-Read those files first. Then read this repo's README and task-relevant code.
-
 ## Repo Rules
 
-- Run `bun run lint && bun run typecheck` before committing.
-- No AI attribution in commits. Commit as `dunamismax`.
-- Push directly to main. Force-push when needed.
-- Dual remotes: GitHub + Codeberg.
-
+- Read `README.md` and `BUILD.md` before changing the repo.
+- Treat the Django app in `podwatch/` and `pods/` as the source of truth for current behavior.
+- Prefer Python and Django tooling only.
+- Run the smallest truthful verification available before committing:
+  - `python3 manage.py check`
+  - `python3 manage.py test`
+  - `python3 -m compileall manage.py podwatch pods`
+- No AI attribution in commits.
+- Do not push or rewrite history as part of routine repo work.
