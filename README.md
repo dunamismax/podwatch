@@ -1,13 +1,11 @@
 # PodWatch
 
-PodWatch is now a small Django app for keeping track of pods and their scheduled events.
+PodWatch is a small Django app for keeping track of pods and their scheduled events.
 
 In this repo, a pod means a named group that meets repeatedly: a game night table, a study group, a volunteer crew, or any other small recurring unit. The app does two things only:
 
 - record pods
 - record upcoming events for those pods
-
-The rewrite intentionally drops the previous React/Bun/auth stack. This pass establishes a literal, server-rendered baseline instead of carrying forward framework choices that were shaping the product more than the product itself.
 
 ## Product Shape
 
@@ -24,10 +22,10 @@ No authentication, RBAC, API surface, or client-side app shell is part of the cu
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-python -m pip install -r requirements.txt
+python3 -m pip install -r requirements.txt
 cp .env.example .env
-python manage.py migrate
-python manage.py runserver
+python3 manage.py migrate
+python3 manage.py runserver
 ```
 
 Open `http://127.0.0.1:8000/`.
@@ -35,11 +33,11 @@ Open `http://127.0.0.1:8000/`.
 ## Commands
 
 ```bash
-python manage.py migrate
-python manage.py runserver
-python manage.py check
-python manage.py test
-python -m compileall manage.py podwatch pods
+python3 manage.py migrate
+python3 manage.py runserver
+python3 manage.py check
+python3 manage.py test
+python3 -m compileall manage.py podwatch pods
 ```
 
 ## Project Structure
@@ -55,9 +53,9 @@ requirements.txt        Python dependencies
 
 ## Scope Notes
 
-- Pods and events are the only grounded concepts retained from the earlier codebase.
-- The old TypeScript frontend, Bun backend, auth system, and Drizzle/Postgres scaffolding were removed rather than translated.
-- If richer workflows return later, they should be added from this narrower base instead of resurrecting the discarded stack.
+- Pods and events are the only product concepts in scope.
+- Authentication, permissions, APIs, and background jobs are intentionally absent from the current implementation.
+- If richer workflows return later, they should be added from this server-rendered Django base.
 
 ## License
 

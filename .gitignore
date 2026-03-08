@@ -1,4 +1,3 @@
-node_modules
 .env
 .env.*
 !.env.example
@@ -9,17 +8,6 @@ db.sqlite3
 staticfiles/
 
 coverage
-dist
-build
-.build
-.react-router
-.nuxt
-.output
-
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
 
 .idea
 .vscode
