@@ -1,4 +1,3 @@
-import { Effect } from "effect";
 import { describe, expect, it } from "vitest";
 
 import type {
@@ -65,14 +64,14 @@ describe("createPodWorkflow", () => {
       }),
     });
 
-    const result = await Effect.runPromiseExit(
+    await expect(
       createPodWorkflow(repository, "user_1", {
         name: "  friday   pod ",
         description: "",
       }),
-    );
-
-    expect(result._tag).toBe("Failure");
+    ).rejects.toMatchObject({
+      _tag: "ConflictError",
+    });
   });
 
   it("normalizes pod names before persisting", async () => {
@@ -91,12 +90,10 @@ describe("createPodWorkflow", () => {
       },
     });
 
-    const result = await Effect.runPromise(
-      createPodWorkflow(repository, "user_1", {
-        name: "  Friday   Pod ",
-        description: "Team sync",
-      }),
-    );
+    const result = await createPodWorkflow(repository, "user_1", {
+      name: "  Friday   Pod ",
+      description: "Team sync",
+    });
 
     expect(result.name).toBe("Friday Pod");
     expect(createdName).toBe("Friday Pod");
@@ -107,16 +104,14 @@ describe("createEventWorkflow", () => {
   it("converts browser-local time to UTC", async () => {
     const repository = createRepository();
 
-    const event = await Effect.runPromise(
-      createEventWorkflow(repository, "user_1", {
-        podId: "pod_1",
-        title: "Summer Meetup",
-        description: "Bring water",
-        location: "Community center",
-        scheduledFor: "2026-07-10T19:00",
-        timezone: "America/Phoenix",
-      }),
-    );
+    const event = await createEventWorkflow(repository, "user_1", {
+      podId: "pod_1",
+      title: "Summer Meetup",
+      description: "Bring water",
+      location: "Community center",
+      scheduledFor: "2026-07-10T19:00",
+      timezone: "America/Phoenix",
+    });
 
     expect(event.scheduledFor).toBe("2026-07-11T02:00:00.000Z");
   });

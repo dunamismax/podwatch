@@ -3,8 +3,12 @@ import type {
   EventSummary,
   PodSummary,
 } from "@podwatch/domain";
+import {
+  CreateEventInputSchema,
+  CreatePodInputSchema,
+  formatPodwatchError,
+} from "@podwatch/domain";
 import { createServerFn } from "@tanstack/react-start";
-import { Effect } from "effect";
 
 export type Viewer = {
   id: string;
@@ -60,8 +64,7 @@ const runMutation = async <T>(
   } catch (error) {
     return {
       ok: false,
-      error:
-        error instanceof Error ? error.message : "Unexpected server failure.",
+      error: formatPodwatchError(error).message,
     };
   }
 };
@@ -114,15 +117,13 @@ export const getDashboard = createServerFn({ method: "GET" }).handler(
       {
         "podwatch.user_id": user.id,
       },
-      async () => Effect.runPromise(loadDashboardWorkflow(repository, user.id)),
+      () => loadDashboardWorkflow(repository, user.id),
     );
   },
 );
 
 export const createPod = createServerFn({ method: "POST" })
-  .inputValidator(
-    (input: unknown) => input as { name: string; description: string },
-  )
+  .inputValidator((input: unknown) => CreatePodInputSchema.parse(input))
   .handler(async ({ data }): Promise<MutationResult<PodSummary>> => {
     const user = await requireViewer();
     const [
@@ -144,25 +145,14 @@ export const createPod = createServerFn({ method: "POST" })
       },
       () =>
         runMutation(
-          async () =>
-            Effect.runPromise(createPodWorkflow(repository, user.id, data)),
+          () => createPodWorkflow(repository, user.id, data),
           "Pod created.",
         ),
     );
   });
 
 export const createEvent = createServerFn({ method: "POST" })
-  .inputValidator(
-    (input: unknown) =>
-      input as {
-        podId: string;
-        title: string;
-        description: string;
-        location: string;
-        scheduledFor: string;
-        timezone: string;
-      },
-  )
+  .inputValidator((input: unknown) => CreateEventInputSchema.parse(input))
   .handler(async ({ data }): Promise<MutationResult<EventSummary>> => {
     const user = await requireViewer();
     const [
@@ -184,8 +174,7 @@ export const createEvent = createServerFn({ method: "POST" })
       },
       () =>
         runMutation(
-          async () =>
-            Effect.runPromise(createEventWorkflow(repository, user.id, data)),
+          () => createEventWorkflow(repository, user.id, data),
           "Event scheduled.",
         ),
     );

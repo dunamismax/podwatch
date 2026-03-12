@@ -1,55 +1,55 @@
-import { Schema } from "effect";
+import * as z from "zod";
 
-export const SummarySchema = Schema.Struct({
-  podCount: Schema.Number,
-  eventCount: Schema.Number,
-  upcomingCount: Schema.Number,
+export const SummarySchema = z.object({
+  podCount: z.number(),
+  eventCount: z.number(),
+  upcomingCount: z.number(),
 });
 
-export const PodSummarySchema = Schema.Struct({
-  id: Schema.String,
-  name: Schema.String,
-  description: Schema.String,
-  eventCount: Schema.Number,
+export const PodSummarySchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  description: z.string(),
+  eventCount: z.number(),
 });
 
-export const EventSummarySchema = Schema.Struct({
-  id: Schema.String,
-  podId: Schema.String,
-  podName: Schema.String,
-  title: Schema.String,
-  description: Schema.String,
-  location: Schema.String,
-  scheduledFor: Schema.String,
-  scheduledTimezone: Schema.String,
+export const EventSummarySchema = z.object({
+  id: z.string(),
+  podId: z.string(),
+  podName: z.string(),
+  title: z.string(),
+  description: z.string(),
+  location: z.string(),
+  scheduledFor: z.string(),
+  scheduledTimezone: z.string(),
 });
 
-export const DashboardSnapshotSchema = Schema.Struct({
+export const DashboardSnapshotSchema = z.object({
   summary: SummarySchema,
-  pods: Schema.Array(PodSummarySchema),
-  events: Schema.Array(EventSummarySchema),
+  pods: z.array(PodSummarySchema),
+  events: z.array(EventSummarySchema),
 });
 
-export const CreatePodInputSchema = Schema.Struct({
-  name: Schema.String,
-  description: Schema.String,
+export const CreatePodInputSchema = z.object({
+  name: z.string(),
+  description: z.string(),
 });
 
-export const CreateEventInputSchema = Schema.Struct({
-  podId: Schema.String,
-  title: Schema.String,
-  description: Schema.String,
-  location: Schema.String,
-  scheduledFor: Schema.String,
-  timezone: Schema.String,
+export const CreateEventInputSchema = z.object({
+  podId: z.string(),
+  title: z.string(),
+  description: z.string(),
+  location: z.string(),
+  scheduledFor: z.string(),
+  timezone: z.string(),
 });
 
-export type Summary = typeof SummarySchema.Type;
-export type PodSummary = typeof PodSummarySchema.Type;
-export type EventSummary = typeof EventSummarySchema.Type;
-export type DashboardSnapshot = typeof DashboardSnapshotSchema.Type;
-export type CreatePodInput = typeof CreatePodInputSchema.Type;
-export type CreateEventInput = typeof CreateEventInputSchema.Type;
+export type Summary = z.infer<typeof SummarySchema>;
+export type PodSummary = z.infer<typeof PodSummarySchema>;
+export type EventSummary = z.infer<typeof EventSummarySchema>;
+export type DashboardSnapshot = z.infer<typeof DashboardSnapshotSchema>;
+export type CreatePodInput = z.infer<typeof CreatePodInputSchema>;
+export type CreateEventInput = z.infer<typeof CreateEventInputSchema>;
 
 export interface PodwatchRepository {
   loadDashboardSnapshot(userId: string, now: Date): Promise<DashboardSnapshot>;
