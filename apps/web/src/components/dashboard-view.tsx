@@ -1,7 +1,6 @@
 import type { DashboardSnapshot } from "@podwatch/domain";
 import { CalendarFold, LoaderCircle, LogOut, Orbit, Plus } from "lucide-react";
 
-import { CoachPanel } from "#/components/coach-panel";
 import type { MutationResult, Viewer } from "#/lib/server-fns";
 import { formatInTimeZone } from "#/lib/timezone";
 
@@ -322,14 +321,6 @@ export function DashboardView(props: DashboardViewProps) {
                 No events yet. Schedule one once a pod exists.
               </p>
             )}
-          </article>
-
-          <article className="panel coach-panel">
-            <div className="panel-heading">
-              <p className="eyebrow">AI Layer</p>
-              <h2>Schedule coach</h2>
-            </div>
-            <CoachPanel />
           </article>
         </div>
       </section>

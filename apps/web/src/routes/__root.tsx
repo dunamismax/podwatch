@@ -31,7 +31,7 @@ export const Route = createRootRouteWithContext<RouterContext>()({
       {
         name: "description",
         content:
-          "Private pod scheduling board built on TanStack Start, Effect, Drizzle, and Better Auth.",
+          "Private pod scheduling board built on TanStack Start, Drizzle, and Better Auth.",
       },
     ],
     links: [

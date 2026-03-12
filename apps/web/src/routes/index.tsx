@@ -23,8 +23,7 @@ function LandingPage() {
         </h1>
         <p className="lede">
           The original Django dashboard is now archived. The active app runs on
-          Bun, TanStack Start, Effect, Better Auth, and Drizzle against
-          PostgreSQL.
+          Bun, TanStack Start, Better Auth, Drizzle, and PostgreSQL.
         </p>
 
         <div className="landing-actions">
@@ -41,8 +40,8 @@ function LandingPage() {
         <article className="landing-card">
           <h2>Typed end to end</h2>
           <p>
-            Effect Schema contracts shape the inputs and the domain layer before
-            anything reaches the database.
+            Zod contracts shape the inputs and the domain layer before anything
+            reaches the database.
           </p>
         </article>
         <article className="landing-card">

@@ -7,19 +7,16 @@ A pod is a named group that meets repeatedly: a study circle, volunteer crew, co
 - create pods
 - schedule events against pods
 - review a recent and upcoming event timeline
-- use an in-app AI coach grounded in the current board state
 
 ## Stack
 
 - Runtime: Bun
-- Package manager / monorepo: pnpm workspaces
+- Package manager / monorepo: Bun workspaces
 - Frontend / app framework: TanStack Start, Router, and Query
 - Language: TypeScript
-- Domain / validation: Effect + Effect Schema
+- Domain / validation: Zod
 - Database: PostgreSQL + Drizzle ORM
 - Auth: Better Auth
-- AI UX: TanStack AI
-- AI workflow orchestration: Mastra
 - Observability: OpenTelemetry
 - Lint / format: Biome
 - Tests: Vitest
@@ -29,7 +26,7 @@ A pod is a named group that meets repeatedly: a study circle, volunteer crew, co
 1. Install dependencies.
 
 ```bash
-pnpm install
+bun install
 ```
 
 2. Copy the environment file and fill in secrets.
@@ -47,13 +44,13 @@ docker compose up -d postgres
 4. Push the Drizzle schema.
 
 ```bash
-pnpm db:push
+bun run db:push
 ```
 
 5. Start the app.
 
 ```bash
-pnpm dev
+bun run dev
 ```
 
 Open `http://127.0.0.1:3000`.
@@ -63,31 +60,27 @@ Open `http://127.0.0.1:3000`.
 - `DATABASE_URL`: PostgreSQL connection string
 - `BETTER_AUTH_SECRET`: secret used to sign auth cookies
 - `BETTER_AUTH_URL`: public origin for Better Auth callbacks and cookies
-- `OPENAI_API_KEY`: optional, enables the TanStack AI coach
-- `AI_MODEL`: optional, required when AI is enabled
 - `OTEL_SERVICE_NAME`: service name for traces
 - `OTEL_EXPORTER_OTLP_ENDPOINT`: optional OTLP HTTP exporter endpoint
-
-If `OPENAI_API_KEY` or `AI_MODEL` are missing, the core app still runs and the AI coach returns a configuration error when used.
 
 ## Commands
 
 ```bash
-pnpm dev
-pnpm build
-pnpm typecheck
-pnpm test
-pnpm db:generate
-pnpm db:push
-pnpm db:studio
+bun run dev
+bun run build
+bun run typecheck
+bun run test
+bun run db:generate
+bun run db:push
+bun run db:studio
 ```
 
 ## Workspace Layout
 
 ```text
-apps/web/              TanStack Start app, routes, auth UI, AI route
+apps/web/              TanStack Start app, routes, and auth UI
 packages/db/           Drizzle schema, PostgreSQL client, repository layer
-packages/domain/       Effect workflows and contracts
+packages/domain/       Zod contracts and async domain workflows
 packages/observability/OpenTelemetry bootstrap helpers
 legacy/django/         Archived Django implementation from before the rewrite
 ```

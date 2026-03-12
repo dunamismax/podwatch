@@ -1,41 +1,43 @@
-export type PodwatchError = {
-  _tag:
-    | "ValidationError"
-    | "ConflictError"
-    | "NotFoundError"
-    | "InfrastructureError";
-  message: string;
-};
+export type PodwatchErrorTag =
+  | "ValidationError"
+  | "ConflictError"
+  | "NotFoundError"
+  | "InfrastructureError";
 
-export const validationError = (message: string): PodwatchError => ({
-  _tag: "ValidationError",
-  message,
-});
+export class PodwatchError extends Error {
+  constructor(
+    readonly _tag: PodwatchErrorTag,
+    message: string,
+  ) {
+    super(message);
+    this.name = _tag;
+  }
+}
 
-export const conflictError = (message: string): PodwatchError => ({
-  _tag: "ConflictError",
-  message,
-});
+const createPodwatchError =
+  (_tag: PodwatchErrorTag) =>
+  (message: string): PodwatchError =>
+    new PodwatchError(_tag, message);
 
-export const notFoundError = (message: string): PodwatchError => ({
-  _tag: "NotFoundError",
-  message,
-});
-
-export const infrastructureError = (message: string): PodwatchError => ({
-  _tag: "InfrastructureError",
-  message,
-});
+export const validationError = createPodwatchError("ValidationError");
+export const conflictError = createPodwatchError("ConflictError");
+export const notFoundError = createPodwatchError("NotFoundError");
+export const infrastructureError = createPodwatchError("InfrastructureError");
 
 export const formatPodwatchError = (error: unknown): PodwatchError => {
+  if (error instanceof PodwatchError) {
+    return error;
+  }
+
   if (
     typeof error === "object" &&
     error !== null &&
     "_tag" in error &&
     "message" in error &&
+    typeof error._tag === "string" &&
     typeof error.message === "string"
   ) {
-    return error as PodwatchError;
+    return new PodwatchError(error._tag as PodwatchErrorTag, error.message);
   }
 
   if (error instanceof Error) {

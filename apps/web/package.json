@@ -16,11 +16,6 @@
     "@podwatch/db": "workspace:*",
     "@podwatch/domain": "workspace:*",
     "@podwatch/observability": "workspace:*",
-    "@mastra/core": "^1.12.0",
-    "@tanstack/ai": "^0.6.3",
-    "@tanstack/ai-client": "^0.6.0",
-    "@tanstack/ai-openai": "^0.6.0",
-    "@tanstack/ai-react": "^0.6.4",
     "@tanstack/react-devtools": "latest",
     "@tanstack/react-query": "^5.90.20",
     "@tanstack/react-query-devtools": "^5.90.20",
@@ -30,11 +25,9 @@
     "@tanstack/react-start": "latest",
     "@tanstack/router-plugin": "^1.166.7",
     "better-auth": "^1.5.5",
-    "effect": "^3.19.19",
     "lucide-react": "^0.545.0",
     "react": "^19.2.0",
-    "react-dom": "^19.2.0",
-    "zod": "^4.1.5"
+    "react-dom": "^19.2.0"
   },
   "devDependencies": {
     "@tanstack/devtools-vite": "latest",
