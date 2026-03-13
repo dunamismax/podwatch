@@ -1,4 +1,0 @@
-[mcp_servers.laravel-boost]
-command = "/home/sawyer/.config/herd-lite/bin/php"
-args = ["artisan", "boost:mcp"]
-cwd = "/home/sawyer/github/podwatch"
