@@ -19,11 +19,37 @@ export class ApiError extends Error {
   }
 }
 
+const parsePayload = async (response: Response) => {
+  const text = await response.text();
+
+  if (!text) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(text) as unknown;
+  } catch {
+    throw new ApiError(
+      "The server returned an unreadable response.",
+      response.status,
+    );
+  }
+};
+
+const getApiErrorMessage = (payload: unknown) =>
+  typeof payload === "object" &&
+  payload !== null &&
+  "error" in payload &&
+  typeof payload.error === "string"
+    ? payload.error
+    : "The request failed.";
+
 const apiFetch = async <T>({
   path,
   schema,
   method = "GET",
   body,
+  parseErrorResponse = false,
 }: {
   path: string;
   schema: {
@@ -31,6 +57,7 @@ const apiFetch = async <T>({
   };
   method?: "GET" | "POST";
   body?: unknown;
+  parseErrorResponse?: boolean;
 }) => {
   const requestInit: RequestInit = {
     method,
@@ -45,21 +72,21 @@ const apiFetch = async <T>({
   }
 
   const response = await fetch(`${API_URL}${path}`, requestInit);
-  const payload = (await response.json()) as unknown;
+  const payload = await parsePayload(response);
 
-  if (!response.ok) {
-    const message =
-      typeof payload === "object" &&
-      payload !== null &&
-      "error" in payload &&
-      typeof payload.error === "string"
-        ? payload.error
-        : "The request failed.";
-
-    throw new ApiError(message, response.status);
+  if (!response.ok && !parseErrorResponse) {
+    throw new ApiError(getApiErrorMessage(payload), response.status);
   }
 
-  return schema.parse(payload);
+  try {
+    return schema.parse(payload);
+  } catch (error) {
+    if (!response.ok) {
+      throw new ApiError(getApiErrorMessage(payload), response.status);
+    }
+
+    throw error;
+  }
 };
 
 export const fetchViewer = async () => {
@@ -89,6 +116,7 @@ export const createPod = (input: CreatePodInput) =>
     method: "POST",
     body: input,
     schema: CreatePodResultSchema,
+    parseErrorResponse: true,
   });
 
 export const createEvent = (input: CreateEventInput) =>
@@ -97,6 +125,7 @@ export const createEvent = (input: CreateEventInput) =>
     method: "POST",
     body: input,
     schema: CreateEventResultSchema,
+    parseErrorResponse: true,
   });
 
 export const getApiUrl = () => API_URL;

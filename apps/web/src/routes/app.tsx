@@ -2,6 +2,7 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, redirect } from "@tanstack/react-router";
 
 import { DashboardView } from "@/components/dashboard-view";
+import { ApiError } from "@/lib/api";
 import { dashboardQueryOptions, viewerQueryOptions } from "@/lib/query";
 import { useBrowserTimeZone } from "@/lib/timezone";
 
@@ -15,8 +16,18 @@ export const Route = createFileRoute("/app")({
       throw redirect({ to: "/login" });
     }
   },
-  loader: ({ context }) =>
-    context.queryClient.ensureQueryData(dashboardQueryOptions()),
+  loader: async ({ context }) => {
+    try {
+      return await context.queryClient.ensureQueryData(dashboardQueryOptions());
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 401) {
+        context.queryClient.setQueryData(["viewer"], null);
+        throw redirect({ to: "/login" });
+      }
+
+      throw error;
+    }
+  },
   component: AppPage,
 });
 

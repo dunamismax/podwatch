@@ -1,10 +1,12 @@
-import type {
-  DashboardSnapshot,
-  EventSummary,
-  PodSummary,
-  PodwatchRepository,
+import {
+  conflictError,
+  type DashboardSnapshot,
+  type EventSummary,
+  notFoundError,
+  type PodSummary,
+  type PodwatchRepository,
 } from "@podwatch/domain";
-import type { PrismaClient } from "@prisma/client";
+import { Prisma, type PrismaClient } from "@prisma/client";
 
 const toIsoString = (value: Date) => value.toISOString();
 
@@ -138,21 +140,32 @@ export const createPodwatchRepository = (
   },
 
   async createPod({ userId, name, nameNormalized, description }) {
-    const pod = await db.pod.create({
-      data: {
-        ownerId: userId,
-        name,
-        nameNormalized,
-        description,
-      },
-    });
+    try {
+      const pod = await db.pod.create({
+        data: {
+          ownerId: userId,
+          name,
+          nameNormalized,
+          description,
+        },
+      });
 
-    return {
-      id: pod.id,
-      name: pod.name,
-      description: pod.description,
-      eventCount: 0,
-    };
+      return {
+        id: pod.id,
+        name: pod.name,
+        description: pod.description,
+        eventCount: 0,
+      };
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === "P2002"
+      ) {
+        throw conflictError("A pod with this name already exists.");
+      }
+
+      throw error;
+    }
   },
 
   async findPodForOwner(userId, podId) {
@@ -179,41 +192,52 @@ export const createPodwatchRepository = (
     scheduledFor,
     scheduledTimezone,
   }) {
-    const event = await db.event.create({
-      data: {
-        ownerId: userId,
-        podId,
-        title,
-        description,
-        location,
-        scheduledFor,
-        scheduledTimezone,
-      },
-      select: {
-        id: true,
-        podId: true,
-        title: true,
-        description: true,
-        location: true,
-        scheduledFor: true,
-        scheduledTimezone: true,
-        pod: {
-          select: {
-            name: true,
+    try {
+      const event = await db.event.create({
+        data: {
+          ownerId: userId,
+          podId,
+          title,
+          description,
+          location,
+          scheduledFor,
+          scheduledTimezone,
+        },
+        select: {
+          id: true,
+          podId: true,
+          title: true,
+          description: true,
+          location: true,
+          scheduledFor: true,
+          scheduledTimezone: true,
+          pod: {
+            select: {
+              name: true,
+            },
           },
         },
-      },
-    });
+      });
 
-    return {
-      id: event.id,
-      podId: event.podId,
-      podName: event.pod.name,
-      title: event.title,
-      description: event.description,
-      location: event.location,
-      scheduledFor: toIsoString(event.scheduledFor),
-      scheduledTimezone: event.scheduledTimezone,
-    };
+      return {
+        id: event.id,
+        podId: event.podId,
+        podName: event.pod.name,
+        title: event.title,
+        description: event.description,
+        location: event.location,
+        scheduledFor: toIsoString(event.scheduledFor),
+        scheduledTimezone: event.scheduledTimezone,
+      };
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === "P2003"
+      ) {
+        throw notFoundError("That pod does not exist for the current user.");
+      }
+
+      throw error;
+    }
   },
 });

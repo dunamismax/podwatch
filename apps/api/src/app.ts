@@ -1,10 +1,8 @@
 import { serve } from "@hono/node-server";
 import {
   CreateEventInputSchema,
-  type CreateEventResult,
   CreateEventResultSchema,
   CreatePodInputSchema,
-  type CreatePodResult,
   CreatePodResultSchema,
   createEventWorkflow,
   createPodWorkflow,
@@ -80,20 +78,19 @@ app.get("/api/dashboard", async (context) => {
 app.post("/api/pods", async (context) => {
   try {
     const viewer = await requireViewer(context);
-    const input = CreatePodInputSchema.parse(await context.req.json());
+    const input = CreatePodInputSchema.parse(
+      await context.req.json().catch(() => undefined),
+    );
     const repository = createPodwatchRepository(prisma);
-    const result = await runMutation<CreatePodResult>(() =>
-      createPodWorkflow(repository, viewer.id, input).then((data) => ({
+    const result = await createPodWorkflow(repository, viewer.id, input).then(
+      (data) => ({
         ok: true as const,
         message: "Pod created.",
         data,
-      })),
+      }),
     );
 
-    return context.json(
-      CreatePodResultSchema.parse(result),
-      result.ok ? 200 : statusForError(result.error),
-    );
+    return context.json(CreatePodResultSchema.parse(result));
   } catch (error) {
     return respondWithError(context, error, "Sign in to create pods.");
   }
@@ -102,20 +99,19 @@ app.post("/api/pods", async (context) => {
 app.post("/api/events", async (context) => {
   try {
     const viewer = await requireViewer(context);
-    const input = CreateEventInputSchema.parse(await context.req.json());
+    const input = CreateEventInputSchema.parse(
+      await context.req.json().catch(() => undefined),
+    );
     const repository = createPodwatchRepository(prisma);
-    const result = await runMutation<CreateEventResult>(() =>
-      createEventWorkflow(repository, viewer.id, input).then((data) => ({
+    const result = await createEventWorkflow(repository, viewer.id, input).then(
+      (data) => ({
         ok: true as const,
         message: "Event scheduled.",
         data,
-      })),
+      }),
     );
 
-    return context.json(
-      CreateEventResultSchema.parse(result),
-      result.ok ? 200 : statusForError(result.error),
-    );
+    return context.json(CreateEventResultSchema.parse(result));
   } catch (error) {
     return respondWithError(context, error, "Sign in to schedule events.");
   }
@@ -134,19 +130,6 @@ export const startServer = () =>
       console.log(`PodWatch API listening on http://localhost:${info.port}`);
     },
   );
-
-const runMutation = async <T extends CreatePodResult | CreateEventResult>(
-  operation: () => Promise<T>,
-): Promise<T | MutationError> => {
-  try {
-    return await operation();
-  } catch (error) {
-    return {
-      ok: false,
-      error: formatPodwatchError(error).message,
-    };
-  }
-};
 
 const respondWithError = (
   context: Context,
@@ -172,20 +155,6 @@ const respondWithError = (
     } satisfies MutationError,
     statusForTag(formatted._tag),
   );
-};
-
-const statusForError = (message: string) => {
-  const lowerCased = message.toLowerCase();
-
-  if (lowerCased.includes("already exists")) {
-    return 409;
-  }
-
-  if (lowerCased.includes("does not exist")) {
-    return 404;
-  }
-
-  return 400;
 };
 
 const statusForTag = (tag: ReturnType<typeof formatPodwatchError>["_tag"]) => {
