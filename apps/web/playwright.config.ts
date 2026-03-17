@@ -14,8 +14,8 @@ export default defineConfig({
   },
   webServer: [
     {
-      command: "pnpm -C ../.. --filter @podwatch/api dev",
-      port: apiPort,
+      command: "pnpm -C ../.. --filter @podwatch/api start",
+      url: `${apiUrl}/health`,
       reuseExistingServer,
       timeout: 120_000,
       env: {
@@ -31,8 +31,8 @@ export default defineConfig({
       },
     },
     {
-      command: `pnpm exec vite dev --port ${webPort}`,
-      port: webPort,
+      command: `pnpm exec vite dev --host 127.0.0.1 --port ${webPort} --strictPort`,
+      url: `http://127.0.0.1:${webPort}`,
       reuseExistingServer,
       timeout: 120_000,
       env: {
