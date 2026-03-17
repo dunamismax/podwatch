@@ -1,8 +1,10 @@
 import { createAuthClient } from "better-auth/react";
 
+import { getApiUrl } from "@/lib/api";
+
 export const authClient = createAuthClient({
-  baseURL:
-    typeof window === "undefined"
-      ? "http://127.0.0.1:3000"
-      : window.location.origin,
+  baseURL: getApiUrl(),
+  fetchOptions: {
+    credentials: "include",
+  },
 });

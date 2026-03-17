@@ -1,8 +1,10 @@
 # PodWatch
 
-PodWatch is a Bun-powered scheduling workspace for small recurring groups.
+PodWatch is a full-stack scheduling workspace for small recurring groups.
 
-A pod is a named group that meets repeatedly: a study circle, volunteer crew, commander table, or any other recurring unit. The rewritten app keeps the product narrow:
+A pod is a named group that meets repeatedly: a study circle, volunteer crew,
+commander table, or any other recurring unit. The product stays intentionally
+narrow:
 
 - create pods
 - schedule events against pods
@@ -10,23 +12,29 @@ A pod is a named group that meets repeatedly: a study circle, volunteer crew, co
 
 ## Stack
 
-- Runtime: Bun
-- Package manager / monorepo: Bun workspaces
-- Frontend / app framework: TanStack Start, Router, and Query
+- Runtime: Node.js
+- Package manager: pnpm
 - Language: TypeScript
-- Domain / validation: Zod
-- Database: PostgreSQL + Drizzle ORM
+- Frontend: Vite + React
+- Routing: TanStack Router
+- Server state: TanStack Query
+- Forms: TanStack Form
+- Validation: Zod
+- UI: shadcn/ui + Radix UI
+- Backend API: Hono
+- Database: PostgreSQL + Prisma ORM
+- Migrations: Prisma Migrate
 - Auth: Better Auth
-- Observability: OpenTelemetry
 - Lint / format: Biome
-- Tests: Vitest
+- Unit tests: Vitest
+- End-to-end tests: Playwright
 
 ## Quick Start
 
 1. Install dependencies.
 
 ```bash
-bun install
+pnpm install
 ```
 
 2. Copy the environment file and fill in secrets.
@@ -41,55 +49,59 @@ cp .env.example .env
 docker compose up -d postgres
 ```
 
-4. Push the Drizzle schema.
+4. Generate the Prisma client and apply the initial migration.
 
 ```bash
-bun run db:push
+pnpm run db:generate
+pnpm run db:migrate
 ```
 
-5. Start the app.
+5. Start the frontend and backend together.
 
 ```bash
-bun run dev
+pnpm run dev
 ```
 
-Open `http://127.0.0.1:3000`.
+Open `http://127.0.0.1:3000`. The Hono API runs on `http://127.0.0.1:4000`.
 
 ## Environment
 
 - `DATABASE_URL`: PostgreSQL connection string
 - `BETTER_AUTH_SECRET`: secret used to sign auth cookies
 - `BETTER_AUTH_URL`: public origin for Better Auth callbacks and cookies
-- `OTEL_SERVICE_NAME`: service name for traces
-- `OTEL_EXPORTER_OTLP_ENDPOINT`: optional OTLP HTTP exporter endpoint
+- `CORS_ORIGIN`: allowed frontend origin for the Hono API
+- `PORT`: API server port
+- `VITE_API_URL`: frontend API base URL
 
 ## Commands
 
 ```bash
-bun run dev
-bun run build
-bun run typecheck
-bun run test
-bun run db:generate
-bun run db:push
-bun run db:studio
+pnpm run dev
+pnpm run build
+pnpm run typecheck
+pnpm run test
+pnpm run test:e2e
+pnpm run db:generate
+pnpm run db:migrate
+pnpm run db:push
+pnpm run db:studio
 ```
 
 ## Workspace Layout
 
 ```text
-apps/web/              TanStack Start app, routes, and auth UI
-packages/db/           Drizzle schema, PostgreSQL client, repository layer
-packages/domain/       Zod contracts and async domain workflows
-packages/observability/OpenTelemetry bootstrap helpers
-legacy/django/         Archived Django implementation from before the rewrite
+apps/api/             Hono API, Better Auth, Prisma schema, and migrations
+apps/web/             Vite SPA, TanStack Router, Query, Form, and shadcn UI
+packages/domain/      Shared Zod contracts and domain workflows
+legacy/django/        Archived Django implementation from before the rewrite
 ```
 
 ## Notes
 
-- The active application is the TypeScript workspace in `apps/web`.
-- The archived Django app remains in `legacy/django` for reference only.
-- The dashboard stores event times as UTC and renders them in the browser timezone.
+- The frontend is a client-side React SPA that talks to the Hono API over HTTP.
+- The backend keeps Better Auth sessions and Postgres persistence separate from
+  the SPA bundle.
+- Event times are stored as UTC and rendered back in the browser timezone.
 
 ## License
 

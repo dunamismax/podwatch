@@ -1,29 +1,43 @@
+import { useForm } from "@tanstack/react-form";
+import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { LoaderCircle } from "lucide-react";
-import { useState } from "react";
+import { ArrowRight, LoaderCircle } from "lucide-react";
+import { type ReactNode, startTransition, useState } from "react";
+import { z } from "zod";
 
-import { authClient } from "#/lib/auth-client";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { authClient } from "@/lib/auth-client";
 
 export function AuthCard() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [mode, setMode] = useState<"sign-in" | "sign-up">("sign-up");
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [isPending, setIsPending] = useState(false);
+  const form = useForm({
+    defaultValues: {
+      name: "",
+      email: "",
+      password: "",
+    },
+    onSubmit: async ({ value }) => {
+      setError(null);
 
-  const submit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setIsPending(true);
-    setError(null);
-
-    try {
       if (mode === "sign-up") {
         const result = await authClient.signUp.email({
-          email,
-          password,
-          name,
+          name: value.name,
+          email: value.email,
+          password: value.password,
         });
 
         if (result.error) {
@@ -32,8 +46,8 @@ export function AuthCard() {
         }
       } else {
         const result = await authClient.signIn.email({
-          email,
-          password,
+          email: value.email,
+          password: value.password,
         });
 
         if (result.error) {
@@ -42,98 +56,232 @@ export function AuthCard() {
         }
       }
 
+      await queryClient.invalidateQueries({ queryKey: ["viewer"] });
+      startTransition(() => {
+        form.reset();
+      });
       await navigate({ to: "/app" });
-    } finally {
-      setIsPending(false);
-    }
-  };
+    },
+  });
 
   return (
-    <article className="auth-card">
-      <div className="auth-switch">
-        <button
-          type="button"
-          className={mode === "sign-up" ? "is-active" : undefined}
-          onClick={() => {
-            setMode("sign-up");
-            setError(null);
-          }}
-        >
-          Create account
-        </button>
-        <button
-          type="button"
-          className={mode === "sign-in" ? "is-active" : undefined}
-          onClick={() => {
-            setMode("sign-in");
-            setError(null);
-          }}
-        >
-          Sign in
-        </button>
+    <div className="grid w-full gap-6 lg:grid-cols-[0.92fr_1.08fr]">
+      <div className="space-y-6">
+        <Badge className="w-fit rounded-full px-4 py-1.5 text-[0.72rem] uppercase tracking-[0.26em]">
+          Private Workspace
+        </Badge>
+        <div className="space-y-4">
+          <h1 className="font-serif text-5xl leading-[0.95] tracking-[-0.04em] text-foreground">
+            {mode === "sign-up"
+              ? "Start a fresh pod board."
+              : "Return to your planning desk."}
+          </h1>
+          <p className="max-w-xl text-lg leading-8 text-muted-foreground">
+            Accounts stay on the Hono API, sessions live in Better Auth, and the
+            SPA only loads the protected dashboard once your session is in
+            place.
+          </p>
+        </div>
       </div>
 
-      <div className="auth-copy">
-        <p className="eyebrow">Private Workspace</p>
-        <h1>
-          {mode === "sign-up"
-            ? "Start a new pod board."
-            : "Return to your pod board."}
-        </h1>
-        <p>
-          PodWatch is now an authenticated planning workspace. Every pod, count,
-          and event timeline is scoped to the current account.
-        </p>
-      </div>
+      <Card className="border-border/70 bg-card/90 shadow-[0_26px_80px_rgba(23,17,11,0.12)] backdrop-blur">
+        <CardHeader className="space-y-4">
+          <Badge
+            variant="secondary"
+            className="w-fit rounded-full border border-primary/15 bg-primary/10 px-3 py-1 text-[0.68rem] uppercase tracking-[0.22em] text-primary"
+          >
+            Better Auth
+          </Badge>
+          <CardTitle className="font-serif text-3xl tracking-[-0.03em]">
+            {mode === "sign-up" ? "Create an account" : "Sign back in"}
+          </CardTitle>
+          <CardDescription>
+            Use email and password to create or reopen your dashboard.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Tabs
+            value={mode}
+            onValueChange={(next) => {
+              setMode(next as "sign-in" | "sign-up");
+              setError(null);
+            }}
+          >
+            <TabsList className="w-full">
+              <TabsTrigger value="sign-up" className="flex-1">
+                Create account
+              </TabsTrigger>
+              <TabsTrigger value="sign-in" className="flex-1">
+                Sign in
+              </TabsTrigger>
+            </TabsList>
 
-      <form className="auth-form" onSubmit={submit}>
-        {mode === "sign-up" ? (
-          <label className="field">
-            <span>Name</span>
-            <input
-              autoComplete="name"
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-              placeholder="Sawyer"
-              required
-            />
-          </label>
-        ) : null}
+            <TabsContent value={mode}>
+              <form
+                className="space-y-4"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  void form.handleSubmit();
+                }}
+              >
+                {mode === "sign-up" ? (
+                  <form.Field
+                    name="name"
+                    validators={{
+                      onChange: z
+                        .string()
+                        .trim()
+                        .min(2, "Name must be at least 2 characters."),
+                    }}
+                  >
+                    {(field) => (
+                      <Field
+                        id={field.name}
+                        label="Name"
+                        error={getErrorMessage(field.state.meta.errors[0])}
+                      >
+                        <Input
+                          autoComplete="name"
+                          id={field.name}
+                          name={field.name}
+                          placeholder="Sawyer"
+                          value={field.state.value}
+                          onBlur={field.handleBlur}
+                          onChange={(event) =>
+                            field.handleChange(event.target.value)
+                          }
+                        />
+                      </Field>
+                    )}
+                  </form.Field>
+                ) : null}
 
-        <label className="field">
-          <span>Email</span>
-          <input
-            autoComplete="email"
-            type="email"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            placeholder="sawyer@example.com"
-            required
-          />
-        </label>
+                <form.Field
+                  name="email"
+                  validators={{
+                    onChange: z.string().email("Enter a valid email address."),
+                  }}
+                >
+                  {(field) => (
+                    <Field
+                      id={field.name}
+                      label="Email"
+                      error={getErrorMessage(field.state.meta.errors[0])}
+                    >
+                      <Input
+                        autoComplete="email"
+                        id={field.name}
+                        name={field.name}
+                        placeholder="sawyer@example.com"
+                        type="email"
+                        value={field.state.value}
+                        onBlur={field.handleBlur}
+                        onChange={(event) =>
+                          field.handleChange(event.target.value)
+                        }
+                      />
+                    </Field>
+                  )}
+                </form.Field>
 
-        <label className="field">
-          <span>Password</span>
-          <input
-            autoComplete={
-              mode === "sign-up" ? "new-password" : "current-password"
-            }
-            type="password"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            placeholder="At least 8 characters"
-            minLength={8}
-            required
-          />
-        </label>
+                <form.Field
+                  name="password"
+                  validators={{
+                    onChange: z
+                      .string()
+                      .min(8, "Password must be at least 8 characters."),
+                  }}
+                >
+                  {(field) => (
+                    <Field
+                      id={field.name}
+                      label="Password"
+                      error={getErrorMessage(field.state.meta.errors[0])}
+                    >
+                      <Input
+                        autoComplete={
+                          mode === "sign-up"
+                            ? "new-password"
+                            : "current-password"
+                        }
+                        id={field.name}
+                        name={field.name}
+                        placeholder="At least 8 characters"
+                        type="password"
+                        value={field.state.value}
+                        onBlur={field.handleBlur}
+                        onChange={(event) =>
+                          field.handleChange(event.target.value)
+                        }
+                      />
+                    </Field>
+                  )}
+                </form.Field>
 
-        {error ? <p className="inline-error">{error}</p> : null}
+                {error ? (
+                  <p className="rounded-xl border border-destructive/20 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                    {error}
+                  </p>
+                ) : null}
 
-        <button className="primary-button" type="submit" disabled={isPending}>
-          {isPending ? <LoaderCircle className="spin" size={18} /> : null}
-          {mode === "sign-up" ? "Create account" : "Sign in"}
-        </button>
-      </form>
-    </article>
+                <form.Subscribe
+                  selector={(state) => [state.canSubmit, state.isSubmitting]}
+                >
+                  {([canSubmit, isSubmitting]) => (
+                    <Button
+                      type="submit"
+                      size="lg"
+                      className="w-full rounded-2xl"
+                      disabled={!canSubmit || isSubmitting}
+                    >
+                      {isSubmitting ? (
+                        <LoaderCircle className="size-4 animate-spin" />
+                      ) : (
+                        <ArrowRight className="size-4" />
+                      )}
+                      {mode === "sign-up" ? "Create account" : "Sign in"}
+                    </Button>
+                  )}
+                </form.Subscribe>
+              </form>
+            </TabsContent>
+          </Tabs>
+        </CardContent>
+      </Card>
+    </div>
   );
 }
+
+function Field(props: {
+  id: string;
+  label: string;
+  error?: string | undefined;
+  children: ReactNode;
+}) {
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={props.id}>{props.label}</Label>
+      {props.children}
+      {props.error ? (
+        <p className="text-sm text-destructive">{props.error}</p>
+      ) : null}
+    </div>
+  );
+}
+
+const getErrorMessage = (error: unknown) => {
+  if (typeof error === "string") {
+    return error;
+  }
+
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "message" in error &&
+    typeof error.message === "string"
+  ) {
+    return error.message;
+  }
+
+  return undefined;
+};

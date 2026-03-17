@@ -1,6 +1,6 @@
 import { QueryClient, queryOptions } from "@tanstack/react-query";
 
-import { getDashboard, getViewer } from "./server-fns";
+import { fetchDashboard, fetchViewer } from "./api";
 
 export const createQueryClient = () =>
   new QueryClient({
@@ -16,11 +16,11 @@ export const createQueryClient = () =>
 export const viewerQueryOptions = () =>
   queryOptions({
     queryKey: ["viewer"],
-    queryFn: () => getViewer(),
+    queryFn: fetchViewer,
   });
 
 export const dashboardQueryOptions = () =>
   queryOptions({
     queryKey: ["dashboard"],
-    queryFn: () => getDashboard(),
+    queryFn: fetchDashboard,
   });

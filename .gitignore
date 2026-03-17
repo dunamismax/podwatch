@@ -11,6 +11,8 @@ dist-ssr
 .nitro
 .wrangler
 coverage
+playwright-report
+test-results
 *.local
 .venv
 __pycache__/
