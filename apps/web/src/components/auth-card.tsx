@@ -18,6 +18,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { authClient } from "@/lib/auth-client";
+import { viewerQueryOptions } from "@/lib/query";
 
 export function AuthCard() {
   const navigate = useNavigate();
@@ -57,6 +58,15 @@ export function AuthCard() {
       }
 
       await queryClient.invalidateQueries({ queryKey: ["viewer"] });
+      const viewer = await queryClient.fetchQuery(viewerQueryOptions());
+
+      if (!viewer) {
+        setError(
+          "Signed in, but could not confirm the session. Please try again.",
+        );
+        return;
+      }
+
       startTransition(() => {
         form.reset();
       });

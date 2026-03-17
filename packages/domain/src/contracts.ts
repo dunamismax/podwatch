@@ -27,7 +27,7 @@ export const EventSummarySchema = z.object({
   title: z.string(),
   description: z.string(),
   location: z.string(),
-  scheduledFor: z.string(),
+  scheduledFor: z.iso.datetime(),
   scheduledTimezone: z.string(),
 });
 

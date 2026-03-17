@@ -1,6 +1,12 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { ApiError, createEvent, createPod, fetchDashboard } from "./api";
+import {
+  ApiError,
+  createEvent,
+  createPod,
+  fetchDashboard,
+  fetchViewer,
+} from "./api";
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -105,5 +111,13 @@ describe("query API helpers", () => {
     await expect(fetchDashboard()).rejects.toEqual(
       new ApiError("Sign in to view the dashboard.", 401),
     );
+  });
+
+  it("surfaces unexpected viewer fetch failures instead of treating them as signed out", async () => {
+    const networkError = new TypeError("fetch failed");
+
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(networkError));
+
+    await expect(fetchViewer()).rejects.toBe(networkError);
   });
 });

@@ -90,18 +90,10 @@ const apiFetch = async <T>({
 };
 
 export const fetchViewer = async () => {
-  try {
-    return await apiFetch({
-      path: "/api/viewer",
-      schema: ViewerSchema.nullable(),
-    });
-  } catch (error) {
-    if (error instanceof ApiError) {
-      throw error;
-    }
-
-    return null;
-  }
+  return apiFetch({
+    path: "/api/viewer",
+    schema: ViewerSchema.nullable(),
+  });
 };
 
 export const fetchDashboard = () =>
