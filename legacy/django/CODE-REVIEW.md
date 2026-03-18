@@ -1,4 +1,10 @@
-# Code Review — PodWatch
+# ARCHIVED: legacy/django/CODE-REVIEW.md
+
+> This review covers the retired Django implementation kept under `legacy/django/`.
+> It is historical reference only and must not be used as the source of truth for active repository work.
+> For the live application, read the repo-root `BUILD.md`.
+
+# Code Review — Legacy Django PodWatch
 
 **Date:** 2026-03-08
 **Scope:** Current Django codebase in this repo

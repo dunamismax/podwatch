@@ -18,6 +18,7 @@
     "check": "biome check . && pnpm run typecheck && pnpm run test",
     "db:generate": "pnpm --filter @podwatch/api db:generate",
     "db:migrate": "pnpm --filter @podwatch/api db:migrate",
+    "db:migrate:deploy": "pnpm --filter @podwatch/api db:migrate:deploy",
     "db:push": "pnpm --filter @podwatch/api db:push",
     "db:studio": "pnpm --filter @podwatch/api db:studio"
   },

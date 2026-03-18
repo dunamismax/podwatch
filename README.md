@@ -56,6 +56,12 @@ pnpm run db:generate
 pnpm run db:migrate
 ```
 
+For production-style deploys, apply checked-in migrations with:
+
+```bash
+pnpm run db:migrate:deploy
+```
+
 5. Start the frontend and backend together.
 
 ```bash
@@ -63,6 +69,7 @@ pnpm run dev
 ```
 
 Open `http://127.0.0.1:3000`. The Hono API runs on `http://127.0.0.1:4000`.
+The web dev server now uses `--strictPort`, so `pnpm run dev` will fail fast instead of silently shifting away from port `3000`.
 
 ## Environment
 
@@ -83,6 +90,7 @@ pnpm run test
 pnpm run test:e2e
 pnpm run db:generate
 pnpm run db:migrate
+pnpm run db:migrate:deploy
 pnpm run db:push
 pnpm run db:studio
 ```

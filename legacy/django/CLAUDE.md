@@ -1,6 +1,8 @@
 # CLAUDE.md
 
 > Code agent instructions for this repository.
+> Archived reference only for the retired Django app in `legacy/django/`.
+> For active repo work, use the repo-root `BUILD.md` and current TypeScript workspace files instead.
 
 ## Repo Rules
 

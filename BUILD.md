@@ -9,7 +9,7 @@ It is a **living document**. Every future agent or developer who changes this re
 - Repo: `podwatch`
 - Reviewed on: `2026-03-18`
 - Branch at review time: `main`
-- Commit at review time: `c0ec60c`
+- Commit at review time: `5a9f7bd`
 - Top-level implementation status: active TypeScript monorepo
 - Archived implementation: `legacy/django/`
 
@@ -36,6 +36,7 @@ The current TypeScript rewrite supports:
 - The frontend is a client-side React SPA served by Vite.
 - The backend is a Hono API with Better Auth mounted under `/api/auth/*`.
 - Shared Zod contracts and business workflows live in `packages/domain/`.
+- Root and API package scripts expose `db:migrate:deploy` for checked-in Prisma migrations.
 - The app currently has create/list flows only. There is no edit/delete flow for pods or events.
 - There is no seed script, no production deployment script, and no CI config in the repo root.
 
@@ -129,7 +130,7 @@ cp .env.example .env
 3. Current defaults in `.env.example`:
 
 ```dotenv
-DATABASE_URL=postgres://podwatch:podwatch@127.0.0.1:5432/podwatch
+DATABASE_URL=postgresql://podwatch:podwatch@127.0.0.1:5432/podwatch
 BETTER_AUTH_SECRET=replace-this-with-a-random-32-character-secret
 BETTER_AUTH_URL=http://127.0.0.1:4000
 CORS_ORIGIN=http://127.0.0.1:3000
@@ -174,6 +175,7 @@ Observed outcomes:
   - passed
   - important: `apps/api` "build" is only `tsc --noEmit`; it validates types but does not create a deployable server artifact
   - `apps/web` produced `apps/web/dist/`
+  - `pnpm run lint`, `pnpm run typecheck`, `pnpm run test`, and `pnpm run build` were re-run after the config/docs cleanup in this pass and still passed
 - `pnpm run db:generate`
   - passed
   - generated Prisma client from `apps/api/prisma/schema.prisma`
@@ -190,12 +192,6 @@ These were also actually executed and should be treated as real current limitati
 ```bash
 docker compose up -d postgres
 DATABASE_URL=postgresql://podwatch:podwatch@127.0.0.1:5432/podwatch pnpm run db:migrate
-DATABASE_URL=postgresql://podwatch:podwatch@127.0.0.1:5432/podwatch \
-BETTER_AUTH_SECRET=development-secret-value-that-is-long-enough \
-BETTER_AUTH_URL=http://127.0.0.1:4000 \
-CORS_ORIGIN=http://127.0.0.1:3000 \
-VITE_API_URL=http://127.0.0.1:4000 \
-pnpm run dev
 ```
 
 Observed outcomes:
@@ -205,12 +201,6 @@ Observed outcomes:
 - `pnpm run db:migrate`
   - failed because PostgreSQL was not reachable at `127.0.0.1:5432`
   - `nc -z 127.0.0.1 5432` returned non-zero during this review
-- `pnpm run dev`
-  - both API and web processes started
-  - API came up on `http://localhost:4000`
-  - Vite did not stay on port `3000`; it auto-shifted to `3001` because `3000` was already in use
-  - this is operationally risky because the default auth/CORS config still expects the web origin to be `http://127.0.0.1:3000`
-  - the command was manually interrupted after verification
 
 ### Unverified but likely commands
 
@@ -218,7 +208,9 @@ These exist in repo scripts/config, but were not fully verified end-to-end in th
 
 ```bash
 cp .env.example .env
+pnpm run dev
 pnpm run preview
+pnpm run db:migrate:deploy
 pnpm run db:push
 pnpm run db:studio
 pnpm --filter @podwatch/api start
@@ -228,10 +220,11 @@ pnpm --filter @podwatch/web dev
 Notes:
 
 - `pnpm --filter @podwatch/api start` is indirectly exercised by `pnpm run test:e2e` through Playwright's `webServer` config, but I did not run it as a standalone manual server workflow.
+- `pnpm run dev` and `pnpm --filter @podwatch/web dev` now use Vite's `--strictPort` behavior through `apps/web/package.json`, so port `3000` conflicts should fail fast instead of silently shifting origins; I did not re-run a manual conflict scenario after this change.
 - `pnpm run preview` was not checked.
+- `pnpm run db:migrate:deploy` now exists in root and API package scripts, but was not verified because no database server was available.
 - `pnpm run db:push` and `pnpm run db:studio` were not checked because no database server was available.
 - There is no seed command in the workspace.
-- There is no production migration command such as `prisma migrate deploy` exposed in root scripts.
 
 ## Source-Of-Truth Notes
 
@@ -281,18 +274,21 @@ Notes:
   - broadly accurate high-level overview of the current TypeScript stack
   - useful for onboarding, but `BUILD.md` should be treated as the primary operational handoff
 - `legacy/django/BUILD.md`
-  - stale and actively misleading for current work
-  - it describes the archived Django app as if it were the active implementation
+  - now explicitly marked as archival-only historical reference
+  - do not use it for active implementation guidance
 - `legacy/django/CLAUDE.md`
-  - stale and actively misleading for current work
-  - it instructs agents to treat the Django app as current source of truth
+  - now explicitly marked as archival-only historical reference
+  - do not use it for active implementation guidance
+- `legacy/django/CODE-REVIEW.md`
+  - now explicitly marked as archival-only historical reference
+  - do not use it for active implementation guidance
 - In any conflict between current TypeScript workspace files and anything under `legacy/django/`, trust the TypeScript workspace
 
-### Configuration ambiguities to watch
+### Recently resolved config drift
 
-- `.env.example` uses `postgres://...`
-- `apps/web/playwright.config.ts` uses `postgresql://...`
-- Prisma accepts both forms, but the repo should standardize on one DSN style to reduce confusion
+- Active TypeScript docs and examples now standardize on `postgresql://...` DSNs.
+- `apps/web/package.json` now pins local web dev to `127.0.0.1:3000` with `--strictPort`.
+- Root and API scripts now expose `db:migrate:deploy` for checked-in Prisma migrations.
 
 ## Current Gaps And Known Issues
 
@@ -310,7 +306,6 @@ Notes:
 
 - `apps/api` does not produce a built server artifact; its `build` script is only type-checking
 - No documented production packaging/deployment path for the API
-- No root script for `prisma migrate deploy`
 - No CI workflow checked into the repo root
 
 ### Verification gaps
@@ -323,33 +318,29 @@ Notes:
 
 ### Operational risks
 
-- `pnpm run dev` is not deterministic if port `3000` is already occupied
-  - Vite shifts to another port
-  - backend `CORS_ORIGIN` and Better Auth `trustedOrigins` still default to `http://127.0.0.1:3000`
-  - this can create hard-to-diagnose auth/CORS breakage during local dev
-- Archived Django docs in `legacy/django/` can send the next agent down the wrong path
+- Local dev now fails fast if port `3000` is occupied rather than silently shifting origins
+  - this is safer than the previous behavior, but the next agent still needs to free `3000` or deliberately reconfigure the web/API origins together before running the app
 - The install step may emit ignored-build-script warnings under stricter pnpm settings; if Prisma/esbuild behavior becomes inconsistent on a fresh machine, inspect pnpm build-script approvals
 
 ## Next-Pass Priorities
 
 ### Highest impact
 
-1. Make local dev startup deterministic.
-   - Decide whether Vite should use `--strictPort`, whether the API should read the actual web origin from a shared env, or whether `pnpm run dev` should fail fast when `3000` is occupied.
-   - This is the most immediate workflow risk for the next agent.
-
-2. Verify and harden the database bootstrap path.
+1. Verify and harden the database bootstrap path.
    - Bring up PostgreSQL, run `pnpm run db:migrate`, and confirm account creation plus pod/event persistence end-to-end.
    - The core product depends on this path, but it was not fully verified in this review.
 
-3. Add meaningful authenticated integration coverage.
+2. Add meaningful authenticated integration coverage.
    - Add at least one end-to-end test for sign-up/sign-in, pod creation, event scheduling, and dashboard refresh.
+
+3. Define the API production build/deploy story.
+   - `db:migrate:deploy` is now available, but the API still has no build artifact or deployment packaging path.
 
 ### Quick wins
 
-1. Remove or clearly mark the stale `legacy/django/BUILD.md` and `legacy/django/CLAUDE.md` as archival-only.
-2. Standardize DSN examples to either `postgres://` or `postgresql://`.
-3. Document or add a production-safe migration command (`prisma migrate deploy` if that is the intended path).
+1. Verify `pnpm run db:migrate:deploy` against a live PostgreSQL instance.
+2. Expand the Playwright suite beyond the public landing/login smoke flow.
+3. Decide whether the API should emit a runtime artifact or remain a source-only TypeScript service.
 
 ### Deeper follow-up work
 
@@ -414,7 +405,7 @@ pnpm run test:e2e
 pnpm run dev
 ```
 
-11. If Vite shifts away from port `3000`, stop and fix the origin mismatch before trusting auth/API behavior.
+11. If `pnpm run dev` fails because port `3000` is occupied, free that port or intentionally change the web origin and API `CORS_ORIGIN` together before continuing.
 12. Recommended code-reading order:
     - `package.json`
     - `apps/api/src/app.ts`
@@ -425,9 +416,9 @@ pnpm run dev
     - `apps/web/src/components/dashboard-view.tsx`
     - `apps/web/src/components/auth-card.tsx`
 13. Safest immediate next tasks:
-    - fix deterministic local dev origin/port handling
     - verify Postgres + migration + auth + dashboard end-to-end
     - add authenticated E2E coverage
+    - define the API production build/deploy path
 
 ## Appendix: Current Test Inventory
 

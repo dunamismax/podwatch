@@ -1,4 +1,10 @@
-# podwatch — Build Tracker
+# ARCHIVED: legacy/django/BUILD.md
+
+> This file describes the retired Django implementation kept under `legacy/django/`.
+> It is historical reference only and must not be used as the source of truth for active repository work.
+> For the live application, read the repo-root `BUILD.md`.
+
+# podwatch — Legacy Django Build Tracker
 
 **Status:** Doc Cleanup Complete (Verification Limited By Environment)
 **Last Updated:** 2026-03-08
